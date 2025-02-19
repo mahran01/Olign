@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "351579444648",
+    "project_id": "fyp-olign",
+    "storage_bucket": "fyp-olign.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:351579444648:android:7cf0a879292dbaafdfb99d",
+        "android_client_info": {
+          "package_name": "com.mran.olign"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "351579444648-ijjhsrcb92m32920quc921e6jnc1cv7v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mran.olign",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "351579444648-dscsr5rlk4mkajem3o3d3omip1etomq4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKXky7UanHigQh01e15J74377EWFMadgw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "351579444648-dscsr5rlk4mkajem3o3d3omip1etomq4.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "351579444648-50tv57aqmr26c86cs1tdfom2rj0v85pn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mran.olign"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
