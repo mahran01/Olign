@@ -164,7 +164,10 @@ const SetupUsername: React.FC<ISetupUsernameProps> = (props) => {
     });
     const { error: updateError } = await updateUserData({ username, name, avatar_uri: avatarUri });
 
-    if (error || updateError) return;
+    if (error || updateError) {
+      console.log(error);
+      return;
+    }
 
     setSuccessText('Profile updated successfully!');
     if (!error && !updateError && param.type === 'create') {

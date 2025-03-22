@@ -1,5 +1,5 @@
 import { ChatWrapper } from '@/components';
-import { AppProvider, useAuthContext } from '@/contexts';
+import { AppProvider, FriendProvider, useAuthContext, UserProvider } from '@/contexts';
 import { Redirect, Stack } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator } from 'react-native';
@@ -35,13 +35,17 @@ const App: React.FC<IAppProps> = () => {
     }
 
     return (
-        <ChatWrapper>
-            <AppProvider>
-                <Stack>
-                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                </Stack>
-            </AppProvider>
-        </ChatWrapper>
+        <UserProvider>
+            <FriendProvider>
+                <ChatWrapper>
+                    <AppProvider>
+                        <Stack>
+                            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                        </Stack>
+                    </AppProvider>
+                </ChatWrapper>
+            </FriendProvider>
+        </UserProvider>
     );
 };
 
