@@ -1,7 +1,7 @@
-import React, { useState, createContext, useContext, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { useRouter } from 'expo-router';
+import React, { createContext, useContext, useMemo, useState } from 'react';
 
 type AuthResult = {
   user?: User | null;

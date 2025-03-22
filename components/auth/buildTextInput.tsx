@@ -1,7 +1,7 @@
-import * as React from 'react';
 import { AlertCircle } from "@tamagui/lucide-icons";
+import React from 'react';
 import { Controller } from "react-hook-form";
-import { YStack, Label, Input, XStack, Text } from "tamagui";
+import { Input, Label, Text, XStack, YStack } from "tamagui";
 
 type TextInputProps = {
     control: any;

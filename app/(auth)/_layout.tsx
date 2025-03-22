@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { TabView, SceneMap } from 'react-native-tab-view';
-import { View, useTheme, Button, XStack, XGroup } from 'tamagui';
 import { Header } from '@/components';
 import { CloudMoon, CloudSun, LogIn, UserPlus2 } from '@tamagui/lucide-icons';
-import { useColorScheme, Appearance } from 'react-native';
+import React, { useState } from 'react';
+import { Appearance, useColorScheme } from 'react-native';
+import { SceneMap, TabView } from 'react-native-tab-view';
+import { Button, View, XGroup, XStack, useTheme } from 'tamagui';
 
 import SignIn from './sign-in';
 import SignUp from './sign-up';

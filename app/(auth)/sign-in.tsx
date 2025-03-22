@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { useAuthContext } from '@/contexts';
-import { View, Button, Form, Spinner } from 'tamagui';
-import { useForm } from 'react-hook-form';
-import { useRouter } from 'expo-router';
 import { buildTextInput as buildDefaultTextInput } from '@/components';
+import { useAuthContext } from '@/contexts';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { Button, Form, Spinner, View } from 'tamagui';
 
 type FormData = {
     email: string;
@@ -91,6 +91,7 @@ const SignIn: React.FC<ISignInProps> = (props) => {
         }
     };
 
+    console.log("Inside signin");
     return (
         <View bg="$background" flex={1}>
             <Form ai='center' w='100%' h='100%' gap="$2" p="$6" onSubmit={handleSubmit(onSubmit)} >

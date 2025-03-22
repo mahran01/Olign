@@ -20,6 +20,7 @@
     "@tamagui/config": "^1.125.26",
     "@tamagui/lucide-icons": "^1.125.26",
     "@tamagui/metro-plugin": "^1.125.26",
+    "base64-arraybuffer": "^1.0.2",
     "expo": "~52.0.39",
     "expo-av": "~15.0.2",
     "expo-clipboard": "~7.0.1",
@@ -47,7 +48,8 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "~0.19.13",
     "stream-chat-expo": "^6.7.0",
-    "tamagui": "^1.125.26"
+    "tamagui": "^1.125.26",
+    "react-native-pager-view": "6.5.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

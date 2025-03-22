@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { useAuthContext } from '@/contexts';
-import { View, Button, Form, Spinner } from 'tamagui';
-import { useForm } from 'react-hook-form';
-import { useRouter } from 'expo-router';
 import { buildTextInput as buildDefaultTextInput } from '@/components';
+import { useAuthContext } from '@/contexts';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { Button, Form, Spinner, View } from 'tamagui';
 
 type FormData = {
     email: string;

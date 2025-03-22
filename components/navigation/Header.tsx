@@ -1,9 +1,9 @@
-import * as React from 'react';
-import { View, Button, Text, XStack } from 'tamagui';
 import { ArrowLeft, CloudMoon, CloudSun } from '@tamagui/lucide-icons';
 import { router } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React from 'react';
 import { Appearance, useColorScheme } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button, Text, View, XStack } from 'tamagui';
 
 interface IHeaderProps {
     backButton?: boolean;
