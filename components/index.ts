@@ -8,3 +8,4 @@ export { default as buildAvatar } from "./shared/buildAvatar";
 export { default as buildListItem } from "./shared/buildListItem";
 export { default as Ripple } from "./shared/Ripple";
 export { default as ThreeColumns } from "./shared/ThreeColumns";
+export { default as AddFriendByUsernameDialog } from "./modals/AddFriendByUsernameDialog";

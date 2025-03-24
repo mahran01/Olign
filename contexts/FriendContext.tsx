@@ -1,20 +1,23 @@
 import { supabase } from '@/utils/supabase';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuthContext } from './AuthContext';
+import { useUserContext } from './UserContext';
 
 type Friend = {
     id: string;
     user_id: string;
+    user_name?: string;
     friend_id: string;
+    friend_name?: string;
     status: string;
     created_at: string;
     last_status_update: string;
 };
 
 interface IFriendContextProps {
-    friends: Friend[] | null;
-    pendingRequest: Friend[] | null;
-    receivedRequest: Friend[] | null;
+    friends: Friend[];
+    pendingRequest: Friend[];
+    receivedRequest: Friend[];
     handleAddFriend: (friendId: string) => Promise<void>;
     handleAcceptRequest: (friendId: string) => Promise<void>;
     handleRejectRequest: (friendId: string) => Promise<void>;
@@ -35,6 +38,7 @@ export const FriendContext = createContext<IFriendContextProps>({
 
 export const FriendProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
     const { session } = useAuthContext();
+    const { getNameByUserId } = useUserContext();
     const [friends, setFriends] = useState<Friend[]>([]);
     const [pendingRequest, setPendingRequest] = useState<Friend[]>([]);
     const [receivedRequest, setReceivedRequest] = useState<Friend[]>([]);
@@ -58,19 +62,23 @@ export const FriendProvider: React.FC<React.PropsWithChildren<{}>> = ({ children
 
         const channel = supabase
             .channel(`friends-updates-${userId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'friends' }, (payload) => {
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'friends' }, async (payload) => {
+                const userName = await getNameByUserId(payload.new.user_id);
+                const friendName = await getNameByUserId(payload.new.friend_id);
                 if (payload.new.user_id === userId) {
                     console.log("added to pending requests");
-                    setPendingRequest((prev) => [...prev, payload.new as Friend]);
+                    setPendingRequest((prev) => [...prev, { ...payload.new, user_name: userName, friend_name: friendName } as Friend]);
                 } else if (payload.new.friend_id === userId) {
                     console.log("added to received requests");
-                    setReceivedRequest((prev) => [...prev, payload.new as Friend]);
+                    setReceivedRequest((prev) => [...prev, { ...payload.new, user_name: userName, friend_name: friendName } as Friend]);
                 }
             })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'friends' }, (payload) => {
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'friends' }, async (payload) => {
+                const userName = await getNameByUserId(payload.new.user_id);
+                const friendName = await getNameByUserId(payload.new.friend_id);
                 if (payload.new.status === "accepted") {
                     console.log("friend request accepted");
-                    setFriends((prev) => [...prev, payload.new as Friend]);
+                    setFriends((prev) => [...prev, { ...payload.new, user_name: userName, friend_name: friendName } as Friend]);
                     setPendingRequest((prev) => prev.filter((e) => e.friend_id !== payload.new.friend_id));
                     setReceivedRequest((prev) => prev.filter((e) => e.friend_id !== payload.new.friend_id));
                 } else if (payload.new.status === "rejected") {
@@ -89,6 +97,29 @@ export const FriendProvider: React.FC<React.PropsWithChildren<{}>> = ({ children
         };
     }, []);
 
+    const _fetchFriends = async () => {
+        setLoading(true);
+        const userId = session?.user.id;
+        const { data: friendsList, error: friendsError } = await supabase
+            .from('friends')
+            .select('*')
+            .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
+            .eq('status', 'accepted');
+        setLoading(false);
+        if (friendsError) {
+            console.error('Error fetching friends:', friendsError.message);
+            return;
+        }
+
+        setFriends(await Promise.all(
+            friendsList.map(async (friend) => ({
+                ...friend,
+                user_name: await getNameByUserId(friend.user_id),
+                friend_name: await getNameByUserId(friend.friend_id),
+            }))
+        ));
+    };
+
     const _fetchPendingRequest = async () => {
         setLoading(true);
         const userId = session?.user.id;
@@ -102,7 +133,13 @@ export const FriendProvider: React.FC<React.PropsWithChildren<{}>> = ({ children
             console.error('Error fetching pending request: ', friendsError.message);
             return;
         }
-        setPendingRequest(pendingList);
+        setPendingRequest(await Promise.all(
+            pendingList.map(async (friend) => ({
+                ...friend,
+                user_name: await getNameByUserId(friend.user_id),
+                friend_name: await getNameByUserId(friend.friend_id),
+            }))
+        ));
     };
 
     const _fetchReceivedRequest = async () => {
@@ -118,23 +155,13 @@ export const FriendProvider: React.FC<React.PropsWithChildren<{}>> = ({ children
             console.error('Error fetching received request: ', friendsError.message);
             return;
         }
-        setReceivedRequest(receivedList);
-    };
-
-    const _fetchFriends = async () => {
-        setLoading(true);
-        const userId = session?.user.id;
-        const { data: friendsList, error: friendsError } = await supabase
-            .from('friends')
-            .select('*')
-            .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
-            .eq('status', 'accepted');
-        setLoading(false);
-        if (friendsError) {
-            console.error('Error fetching friends:', friendsError.message);
-            return;
-        }
-        setFriends(friendsList);
+        setReceivedRequest(await Promise.all(
+            receivedList.map(async (friend) => ({
+                ...friend,
+                user_name: await getNameByUserId(friend.user_id),
+                friend_name: await getNameByUserId(friend.friend_id),
+            }))
+        ));
     };
 
     const handleAddFriend = async (friendId: string) => {

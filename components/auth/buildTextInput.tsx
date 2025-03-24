@@ -6,7 +6,7 @@ import { Input, Label, Text, XStack, YStack } from "tamagui";
 type TextInputProps = {
     control: any;
     name: string;
-    label: string,
+    label?: string,
     placeholder?: string;
     rules?: object;
     error?: any;
@@ -35,7 +35,7 @@ export const buildTextInput = (({
     input,
 }: TextInputProps) => (
     <YStack w="100%">
-        <Label>{label}</Label>
+        {label && <Label>{label}</Label>}
         <Controller
             control={control}
             rules={rules}

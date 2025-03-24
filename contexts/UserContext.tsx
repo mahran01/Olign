@@ -14,12 +14,14 @@ interface IUserContextProps {
     userProfile: UserProfile | null;
     loading: boolean;
     getUserIdByUsername: (username: string) => Promise<string | null>;
+    getNameByUserId: (userId: string) => Promise<string | null>;
 }
 
 export const UserContext = createContext<IUserContextProps>({
     userProfile: null,
     loading: true,
     getUserIdByUsername: async () => null,
+    getNameByUserId: async () => null,
 });
 
 export const UserProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
@@ -70,16 +72,34 @@ export const UserProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
         return user.user_id;
     };
 
+    const getNameByUserId = async (userId: string) => {
+
+        setLoading(true);
+        const { data: user, error: userError } = await supabase
+            .from("user_profiles")
+            .select("name")
+            .eq("user_id", userId)
+            .single();
+        if (userError) {
+            console.error('Error fetching user:', userError.message);
+            return null;
+        }
+        setLoading(false);
+        return user.name;
+    };
+
     const value = useMemo(
         () => ({
             userProfile,
             loading,
-            getUserIdByUsername
+            getUserIdByUsername,
+            getNameByUserId,
         }),
         [
             userProfile,
             loading,
-            getUserIdByUsername
+            getUserIdByUsername,
+            getNameByUserId,
         ]
     );
 

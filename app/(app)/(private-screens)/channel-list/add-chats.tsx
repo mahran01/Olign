@@ -10,59 +10,58 @@ interface IAddChatProps {
 
 const AddChat: React.FC<IAddChatProps> = (props) => {
     const router = useRouter();
-    const { handleAddFriend, friends: friend2, pendingRequest, receivedRequest } = useFriendContext();
-    const { getUserIdByUsername, userProfile } = useUserContext();
-    const friends = [
-        {
-            avatarUri: "",
-            name: "John Doe",
-            username: "johndoe"
-        },
-        {
-            avatarUri: "",
-            name: "Jane Smith",
-            username: "janesmith"
-        },
-        {
-            avatarUri: "",
-            name: "Michael Johnson",
-            username: "michaeljohnson"
-        },
-        {
-            avatarUri: "",
-            name: "Emily Davis",
-            username: "emilydavis"
-        },
-        {
-            avatarUri: "",
-            name: "David Brown",
-            username: "davidbrown"
-        },
-        {
-            avatarUri: "",
-            name: "Sophia Wilson",
-            username: "sophiawilson"
-        },
-        {
-            avatarUri: "",
-            name: "James Lee",
-            username: "jameslee"
-        },
-        {
-            avatarUri: "",
-            name: "Olivia Harris",
-            username: "oliviaharris"
-        },
-        {
-            avatarUri: "",
-            name: "William Clark",
-            username: "williamclark"
-        },
-        {
-            avatarUri: "",
-            name: "Isabella Allen",
-            username: "isabellaallen"
-        }
+    const { friends: friend2, pendingRequest, receivedRequest } = useFriendContext();
+    const friends: { avatarUri: string, name: string, username: string; }[] = [
+        // {
+        //     avatarUri: "",
+        //     name: "John Doe",
+        //     username: "johndoe"
+        // },
+        // {
+        //     avatarUri: "",
+        //     name: "Jane Smith",
+        //     username: "janesmith"
+        // },
+        // {
+        //     avatarUri: "",
+        //     name: "Michael Johnson",
+        //     username: "michaeljohnson"
+        // },
+        // {
+        //     avatarUri: "",
+        //     name: "Emily Davis",
+        //     username: "emilydavis"
+        // },
+        // {
+        //     avatarUri: "",
+        //     name: "David Brown",
+        //     username: "davidbrown"
+        // },
+        // {
+        //     avatarUri: "",
+        //     name: "Sophia Wilson",
+        //     username: "sophiawilson"
+        // },
+        // {
+        //     avatarUri: "",
+        //     name: "James Lee",
+        //     username: "jameslee"
+        // },
+        // {
+        //     avatarUri: "",
+        //     name: "Olivia Harris",
+        //     username: "oliviaharris"
+        // },
+        // {
+        //     avatarUri: "",
+        //     name: "William Clark",
+        //     username: "williamclark"
+        // },
+        // {
+        //     avatarUri: "",
+        //     name: "Isabella Allen",
+        //     username: "isabellaallen"
+        // }
     ];
 
     return (
@@ -75,14 +74,7 @@ const AddChat: React.FC<IAddChatProps> = (props) => {
                             icon: <UserRoundPlus size='$1' />,
                             title: "Add friends",
                             // subtitle: "Find your friends",
-                            onPress: () => router.push('/channel-list/add-friends')
-                            // async () => {
-                            //     const addFriend = async () => {
-                            //         const id = await getUserIdByUsername("m6mah_ran");
-                            //         if (id) handleAddFriend(id);
-                            //     };
-                            //     await addFriend();
-                            // }
+                            onPress: () => router.push('/channel-list/(add-friends)')
                         })}
                         {buildListItem({
                             icon: <MessagesSquare size='$1' />,
