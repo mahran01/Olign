@@ -15,7 +15,7 @@ export type ReceivedFriendRequest = {
     id: string;
     createdAt: Date;
     status: FriendRequestStatus;
-    sender_id: string;
+    senderId: string;
     senderPublicProfile: UserPublicProfile;
 };
 
@@ -23,6 +23,6 @@ export type SentFriendRequest = {
     id: string;
     createdAt: Date;
     status: FriendRequestStatus;
-    receiver_id: string;
+    receiverId: string;
     receiverPublicProfile: UserPublicProfile;
 };
