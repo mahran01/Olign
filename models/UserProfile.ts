@@ -6,5 +6,5 @@ export type UserProfile = UserPublicProfile & {
 export type UserPublicProfile = {
     username: string | null;
     name: string | null;
-    avatar_uri: string | null;
+    avatarUri: string | null;
 };
