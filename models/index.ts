@@ -1,4 +1,4 @@
-export { BlockedUser as BlockedUserType } from "./BlockedUser";
+export { BlockedUser as BlockedUserType, mapBlockedUserFromDB } from "./BlockedUser";
 export { Friend as FriendType, mapFriendFromDB } from "./Friend";
 export {
     FriendRequest as FriendRequestType,

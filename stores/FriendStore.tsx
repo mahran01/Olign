@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/utils/supabase';
-import { UserPublicProfileType, FriendRequestType, FriendType, mapRequestFromDB, mapFriendFromDB, BlockedUserType, SentFriendRequestType, ReceivedFriendRequestType } from '@/models';
+import { UserPublicProfileType, FriendRequestType, FriendType, mapRequestFromDB, mapFriendFromDB, BlockedUserType, SentFriendRequestType, ReceivedFriendRequestType, mapBlockedUserFromDB } from '@/models';
 import { useAuthContext } from '@/contexts';
 
 export type FriendState = {
@@ -16,9 +16,11 @@ export type FriendState = {
 
 export type FriendAction = {
     fetchAll: () => Promise<void>;
-    sendFriendRequest: (receiverId: string) => Promise<void>;
+    fetchUserPublicProfile: (userId: string) => Promise<UserPublicProfileType>;
+    sendFriendRequest: (receiverId: string, receiverPublicProfile: UserPublicProfileType) => Promise<void>;
     acceptFriendRequest: (requestId: string) => Promise<void>;
     rejectFriendRequest: (requestId: string) => Promise<void>;
+    blockUser: (blockedId: string, blockedPublicProfile: UserPublicProfileType) => Promise<void>;
     subscribeToChanges: () => void;
 };
 
@@ -35,7 +37,7 @@ export const defaultInitState: FriendState = {
     loading: false,
 };
 
-export const useFriendStore = create<FriendStore>()((set) => ({
+export const useFriendStore = create<FriendStore>()((set, get) => ({
     ...defaultInitState,
 
     fetchAll: async () => {
@@ -52,18 +54,17 @@ export const useFriendStore = create<FriendStore>()((set) => ({
                 .in('status', ['pending', 'rejected']);
 
             if (error) {
-                console.error('Error fetching friend requests: ', error.message);
-                return;
+                throw new Error('Error fetching friend requests: ' + error.message);
             }
 
             const { rejected, received, sent } = data.reduce((r, e) => {
                 if (e.sender_id === userId && e.status === 'rejected') {
                     r.rejected.add(e.receiver_id);
                 }
-                if (e.receiver_id === userId && e.status === 'pending') {
+                else if (e.receiver_id === userId && e.status === 'pending') {
                     r.received.push({ id: e.id, status: e.status, senderId: e.sender_id });
                 }
-                if (e.sender_id === userId && e.status === 'pending') {
+                else if (e.sender_id === userId && e.status === 'pending') {
                     r.sent.push({ id: e.id, status: e.status, receiverId: e.receiver_id });
                 }
                 return r;
@@ -80,8 +81,7 @@ export const useFriendStore = create<FriendStore>()((set) => ({
                 .eq('user_id', userId);
 
             if (error) {
-                console.error('Error fetching friends: ', error.message);
-                return;
+                throw new Error('Error fetching friends: ' + error.message);
             }
 
             const friends: FriendType[] = mapFriendFromDB(data);
@@ -97,15 +97,14 @@ export const useFriendStore = create<FriendStore>()((set) => ({
                 .or(`user_id.eq.${userId},blocked_id.eq.${userId}`);
 
             if (error) {
-                console.error('Error fetching blocked users: ', error.message);
-                return;
+                throw new Error('Error fetching blocked users: ' + error.message);
             }
 
             const { blockedUser, getBlockedByUser } = data.reduce((r, e) => {
                 if (e.user_id === userId) {
                     r.blockedUser.push({ id: e.id, blockedId: e.blocked_id });
                 }
-                if (e.blocked_id === userId) {
+                else if (e.blocked_id === userId) {
                     r.getBlockedByUser.add(e.user_id);
                 }
                 return r;
@@ -133,9 +132,7 @@ export const useFriendStore = create<FriendStore>()((set) => ({
                 .in('user_id', Array.from(userIds));
 
             if (error) {
-                console.error('Error fetching user public profiles: ', error.message);
-                set({ loading: false });
-                return;
+                throw new Error('Error fetching user public profiles: ' + error.message);
             }
 
             const userPublicProfiles = data.reduce((acc, user) => {
@@ -146,32 +143,61 @@ export const useFriendStore = create<FriendStore>()((set) => ({
             set({ userPublicProfiles });
         };
 
+        try {
+            await Promise.all([
+                _fetchFriendRequests(),
+                _fetchFriends(),
+                _fetchBlockedUsers(),
+            ]);
 
-        set({ loading: true });
+            await _fetchUserPublicProfiles();
 
-        await Promise.all([
-            _fetchFriendRequests(),
-            _fetchFriends(),
-            _fetchBlockedUsers(),
-        ]);
-
-        await _fetchUserPublicProfiles();
+        } catch (error) {
+            console.error(error);
+            set({ loading: false });
+            return;
+        }
 
         set({ loading: false });
     },
 
-    sendFriendRequest: async (receiverId) => {
+    fetchUserPublicProfile: async (userId: string) => {
+        set({ loading: true });
+
+        const { data, error } = await supabase
+            .from('user_profiles')
+            .select(`username, name, avatar_uri`)
+            .eq('user_id', userId)
+            .single();
+
+        set({ loading: false });
+
+        if (error) {
+            throw new Error('Error fetching user public profiles:' + error.message);
+        }
+
+        return { username: data.username, name: data.name, avatarUri: data.avatar_uri };
+    },
+
+    sendFriendRequest: async (receiverId, receiverPublicProfile) => {
 
         set({ loading: true });
-        const { session } = useAuthContext();
-        const userId = session?.user.id;
+
+        const userId = useAuthContext().session?.user.id;
+
+        if (userId === receiverId ||
+            get().getBlockedByUser.has(receiverId) ||
+            get().rejectedSentRequests.has(receiverId) ||
+            get().pendingSentRequests.some(e => e.receiverId === receiverId) ||
+            get().friends.some(e => e.friendId === receiverId)) {
+
+            console.error('Error sending friend request: Already a friend or pending request or rejected request or get blocked by receiver');
+            return;
+        }
 
         const { data, error } = await supabase
             .from('friend_requests')
-            .select(`id, sender_id, receiver_id, created_at, status`)
-            .eq('sender_id', userId);
-
-        const sentRequests: FriendRequestType[] = mapRequestFromDB(data);
+            .insert({ receiver_id: receiverId });
 
         set({ loading: false });
 
@@ -179,14 +205,22 @@ export const useFriendStore = create<FriendStore>()((set) => ({
             console.error('Error fetching pending request: ', error.message);
             return;
         }
-        set((state) => ({ pendingSentRequests: [...state.pendingSentRequests, ...sentRequests] }));
+
+        const sentRequests: FriendRequestType[] = mapRequestFromDB(data);
+        set((state) => ({
+            pendingSentRequests: [...state.pendingSentRequests, ...sentRequests],
+            userPublicProfiles: {
+                ...state.userPublicProfiles,
+                [receiverId]: receiverPublicProfile
+            }
+        }));
     },
 
     acceptFriendRequest: async (requestId) => {
 
         set({ loading: true });
 
-        const { data, error } = await supabase
+        const { error } = await supabase
             .from('friend_requests')
             .update({ status: 'accepted' })
             .eq('id', requestId);
@@ -203,7 +237,7 @@ export const useFriendStore = create<FriendStore>()((set) => ({
 
         set({ loading: true });
 
-        const { data, error } = await supabase
+        const { error } = await supabase
             .from('friend_requests')
             .update({ status: 'rejected' })
             .eq('id', requestId);
@@ -216,13 +250,38 @@ export const useFriendStore = create<FriendStore>()((set) => ({
         }
     },
 
+    //TODO - Check for various conditions e.g. (block, ongoing request, friend) and respond accordingly.
+    blockUser: async (blockedId, blockedPublicProfile) => {
+
+        set({ loading: true });
+
+        const { data, error } = await supabase
+            .from('blocked_users')
+            .insert({ blocked_id: blockedId });
+
+        set({ loading: false });
+
+        if (error) {
+            console.error('Error blocking user: ', error.message);
+            return;
+        }
+
+        const blockedUser = mapBlockedUserFromDB(data);
+        set((state) => ({
+            blockedUser: [...state.blockedUser, ...blockedUser],
+            userPublicProfiles: {
+                ...state.userPublicProfiles,
+                [blockedId]: blockedPublicProfile
+            }
+        }));
+    },
+
     subscribeToChanges: () => {
 
         set({ loading: true });
         const { session } = useAuthContext();
         const userId = session?.user.id;
 
-        //TODO
         const channel = supabase
             .channel(`friend-changes-${userId}`)
             /**
@@ -242,7 +301,7 @@ export const useFriendStore = create<FriendStore>()((set) => ({
                     set((state) => ({ friends: [...state.friends, ...friends] }));
                 }
             )
-            // Listen for updates in friend_requests (when receiver accepts or rejects)
+            // Listen for updates in friend_requests for sender (when receiver accepts or rejects)
             .on(
                 'postgres_changes',
                 {
@@ -252,14 +311,69 @@ export const useFriendStore = create<FriendStore>()((set) => ({
                     filter: `sender_id=eq.${userId}`
                 },
                 (payload) => {
-                    console.log('Friend request updated:', payload.new);
+                    const { id: requestId, status } = payload.new;
+
+                    if (!requestId || status === 'pending') return;
+
+                    else if (status === 'accepted' || status === 'rejected') {
+                        set((state) => ({
+                            pendingSentRequests: state.pendingSentRequests.filter(e => e.id !== requestId),
+                        }));
+                    }
+                }
+            )
+            // Listen for insert in friend_requests for receiver (When sender send request)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'friend_requests',
+                    filter: `receiver_id=eq.${userId}`
+                },
+                async (payload) => {
+                    const { id: requestId, sender_id: senderId, status } = payload.new;
+                    if (!requestId || status !== 'pending') return;
+
+                    const { data, error } = await supabase
+                        .from('user_profiles')
+                        .select(`username, name, avatar_uri`)
+                        .eq('user_id', senderId)
+                        .single();
+
+                    if (error) {
+                        console.error('Error fetching user public profiles:', error.message);
+                        return;
+                    }
 
                     set((state) => ({
-                        pendingSentRequests: state.pendingSentRequests.map((req) =>
-                            req.id === payload.new.id ? { ...req, status: payload.new.status } : req
-                        ),
+                        pendingReceivedRequests: [...state.pendingReceivedRequests, { id: requestId, senderId, status }],
+                        userPublicProfiles: {
+                            ...state.userPublicProfiles,
+                            [senderId]: state.fetchUserPublicProfile(senderId),
+                        }
                     }));
                 }
+            )
+            // Listen for insert in bloked_users for blocked user (When others block user)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'blocked_users',
+                    filter: `blocked_id=eq.${userId}`
+                },
+                async (payload) => {
+                    const { user_id: getBlockedById } = payload.new;
+                    if (!getBlockedById) return;
+
+                    set((state) => ({
+                        getBlockedByUser: new Set<string>([...state.getBlockedByUser, getBlockedById]),
+                    }));
+                }
+            )
+
             .subscribe();
 
         return () => {
