@@ -1,7 +1,8 @@
 import { ChatWrapper } from '@/components';
 import { AppProvider, FriendProvider, useAuthContext, UserProvider } from '@/contexts';
+import { useFriendStore } from '@/stores';
 import { Redirect, Stack } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ActivityIndicator } from 'react-native';
 
 interface IAppProps {
@@ -9,10 +10,15 @@ interface IAppProps {
 
 const App: React.FC<IAppProps> = () => {
 
-    console.log("inside layout (app)");
-
-
     const { session, isLoading, userIsReady } = useAuthContext();
+    const { fetchAll, subscribeToChanges } = useFriendStore();
+
+    useEffect(() => {
+        if (session) {
+            fetchAll(session);
+            subscribeToChanges(session);
+        }
+    }, []);
 
     // You can keep the splash screen open, or render a loading screen like we do here.
     if (isLoading) {
@@ -36,15 +42,13 @@ const App: React.FC<IAppProps> = () => {
 
     return (
         <UserProvider>
-            <FriendProvider>
-                <ChatWrapper>
-                    <AppProvider>
-                        <Stack>
-                            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                        </Stack>
-                    </AppProvider>
-                </ChatWrapper>
-            </FriendProvider>
+            <ChatWrapper>
+                <AppProvider>
+                    <Stack>
+                        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                    </Stack>
+                </AppProvider>
+            </ChatWrapper>
         </UserProvider>
     );
 };

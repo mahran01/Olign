@@ -1,7 +1,16 @@
 import { create } from 'zustand';
 import { supabase } from '@/utils/supabase';
-import { UserPublicProfileType, FriendRequestType, FriendType, mapRequestFromDB, mapFriendFromDB, BlockedUserType, SentFriendRequestType, ReceivedFriendRequestType, mapBlockedUserFromDB } from '@/models';
-import { useAuthContext } from '@/contexts';
+import {
+    UserPublicProfileType,
+    FriendRequestType,
+    FriendType,
+    mapRequestFromDB,
+    mapFriendFromDB,
+    BlockedUserType,
+    SentFriendRequestType,
+    ReceivedFriendRequestType,
+    mapBlockedUserFromDB
+} from '@/models';
 
 export type FriendState = {
     pendingSentRequests: SentFriendRequestType[];
@@ -15,13 +24,16 @@ export type FriendState = {
 };
 
 export type FriendAction = {
-    fetchAll: () => Promise<void>;
+    fetchAll: (session: any) => Promise<void>;
     fetchUserPublicProfile: (userId: string) => Promise<UserPublicProfileType>;
-    sendFriendRequest: (receiverId: string, receiverPublicProfile: UserPublicProfileType) => Promise<void>;
+    sendFriendRequest: (receiverId: string, receiverPublicProfile: UserPublicProfileType, session: any) => Promise<void>;
     acceptFriendRequest: (requestId: string) => Promise<void>;
     rejectFriendRequest: (requestId: string) => Promise<void>;
-    blockUser: (blockedId: string, blockedPublicProfile: UserPublicProfileType) => Promise<void>;
-    subscribeToChanges: () => void;
+    removeFriendRequest: (requestId: string) => Promise<void>;
+    getRequestIdFromUserId: (anotherUserId: string) => string;
+    removeFriend: (friendId: string, session: any) => Promise<void>;
+    blockUser: (blockedId: string, blockedPublicProfile: UserPublicProfileType, session: any) => Promise<void>;
+    subscribeToChanges: (session: any) => void;
 };
 
 export type FriendStore = FriendState & FriendAction;
@@ -40,10 +52,8 @@ export const defaultInitState: FriendState = {
 export const useFriendStore = create<FriendStore>()((set, get) => ({
     ...defaultInitState,
 
-    fetchAll: async () => {
-
-        const { session } = useAuthContext();
-        const userId = session?.user.id;
+    fetchAll: async (session) => {
+        const userId = session.user.id;
 
         const _fetchFriendRequests = async () => {
 
@@ -179,21 +189,30 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
         return { username: data.username, name: data.name, avatarUri: data.avatar_uri };
     },
 
-    sendFriendRequest: async (receiverId, receiverPublicProfile) => {
+    sendFriendRequest: async (receiverId, receiverPublicProfile, session) => {
 
         set({ loading: true });
 
-        const userId = useAuthContext().session?.user.id;
+        const userId = session.user.id;
+
+        console.log("Before get");
+
+        const state = get();
+
+        console.log("After get");
 
         if (userId === receiverId ||
-            get().getBlockedByUser.has(receiverId) ||
-            get().rejectedSentRequests.has(receiverId) ||
-            get().pendingSentRequests.some(e => e.receiverId === receiverId) ||
-            get().friends.some(e => e.friendId === receiverId)) {
+            state.getBlockedByUser.has(receiverId) ||
+            state.rejectedSentRequests.has(receiverId) ||
+            state.pendingSentRequests.some(e => e.receiverId === receiverId) ||
+            state.friends.some(e => e.friendId === receiverId)) {
 
             console.error('Error sending friend request: Already a friend or pending request or rejected request or get blocked by receiver');
             return;
         }
+
+
+        console.log("After condition, before supabase");
 
         const { data, error } = await supabase
             .from('friend_requests')
@@ -201,8 +220,11 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
 
         set({ loading: false });
 
+        console.log("After supabase");
+
+
         if (error) {
-            console.error('Error fetching pending request: ', error.message);
+            console.error('Error inserting friend request: ', error.message);
             return;
         }
 
@@ -237,27 +259,125 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
 
         set({ loading: true });
 
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('friend_requests')
             .update({ status: 'rejected' })
             .eq('id', requestId);
-
-        set({ loading: false });
 
         if (error) {
             console.error('Error rejecting request:', error.message);
             return;
         }
+
+
+        set((state) => {
+            // Find the sender's ID before filtering
+            const rejectedRequest = state.pendingReceivedRequests.find(e => e.id === requestId);
+            const rejectedUserId = rejectedRequest?.senderId;
+
+            const { [rejectedUserId!]: _, ...updatedUserPublicProfiles } = state.userPublicProfiles;
+
+            return {
+                pendingSentRequests: state.pendingSentRequests.filter(e => e.id !== requestId),
+                userPublicProfiles: updatedUserPublicProfiles
+            };
+        });
     },
 
-    //TODO - Check for various conditions e.g. (block, ongoing request, friend) and respond accordingly.
-    blockUser: async (blockedId, blockedPublicProfile) => {
+    /**
+     * Only use this to remove request for pending & rejected
+     * Or to remove buggy accepted request (accepted but is not friend)
+     * * Use removeFriend to remove friend together with the accepted request
+     */
+    removeFriendRequest: async (requestId) => {
 
         set({ loading: true });
 
+        const { error } = await supabase
+            .from('friend_requests')
+            .delete()
+            .eq('id', requestId);
+
+        if (error) {
+            throw new Error('Error removing friend request: ' + error.message);
+        }
+    },
+
+    getRequestIdFromUserId: (anotherUserId) => {
+
+        const { pendingSentRequests, pendingReceivedRequests } = get();
+
+        // Find in sent requests
+        const sentRequest = pendingSentRequests.find(e => e.receiverId === anotherUserId);
+        if (sentRequest) return sentRequest.id;
+
+        // Find in received requests
+        const receivedRequest = pendingReceivedRequests.find(e => e.senderId === anotherUserId);
+        if (receivedRequest) return receivedRequest.id;
+
+        return '';
+    },
+
+    removeFriend: async (friendId, session) => {
+
+        set({ loading: true });
+
+        const userId = session.user.id;
+
+        // Delete from 'friends' table
+        const { error: friendsErr } = await supabase
+            .from('friends')
+            .delete()
+            .or(`(user_id.eq.${userId},friend_id.eq.${friendId}),(user_id.eq.${friendId},friend_id.eq.${userId})`);
+
+        // Delete from 'friend_requests' table, delete both way
+        const { error: reqErr } = await supabase
+            .from('friend_requests') // Fixed the table name
+            .delete()
+            .or(`(sender_id.eq.${userId},receiver_id.eq.${friendId}),(sender_id.eq.${friendId},receiver_id.eq.${userId})`);
+
+        // Proper error handling
+        if (friendsErr || reqErr) {
+            throw new Error(`Error removing friend: ${friendsErr?.message || reqErr?.message}`);
+        }
+    },
+
+    blockUser: async (blockedId, blockedPublicProfile, session) => {
+
+        set({ loading: true });
+
+        const userId = session.user.id;
+
+        const { userPublicProfiles, blockedUser, pendingSentRequests, pendingReceivedRequests, friends, removeFriendRequest, removeFriend } = get();
+
+        if (userId === blockedId) {
+            console.error('Cannot block self');
+            return;
+        }
+        // Only check when they are among friends, pending request or blocked users
+        else if (blockedId in userPublicProfiles) {
+
+            if (blockedUser.some(e => e.blockedId === blockedId)) {
+                console.error('User is already blocked');
+            }
+            else if (pendingSentRequests.some(e => e.receiverId === blockedId)) {
+                const requestId = pendingSentRequests.find(e => e.receiverId === blockedId)?.id;
+                removeFriendRequest(requestId!);
+            }
+            else if (pendingReceivedRequests.some(e => e.senderId === blockedId)) {
+                const requestId = pendingReceivedRequests.find(e => e.senderId === blockedId)?.id;
+                removeFriendRequest(requestId!);
+            }
+            else if (friends.some(e => e.friendId === blockedId)) {
+                const friendId = friends.find(e => e.friendId === blockedId)?.id;
+                removeFriend(friendId!);
+            }
+        }
+
         const { data, error } = await supabase
             .from('blocked_users')
-            .insert({ blocked_id: blockedId });
+            .insert({ blocked_id: blockedId })
+            .select();
 
         set({ loading: false });
 
@@ -266,9 +386,14 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
             return;
         }
 
-        const blockedUser = mapBlockedUserFromDB(data);
+        if (!data || data.length === 0) {
+            console.error('No data returned from blocking user');
+            return;
+        }
+
+        const blockedUsers = mapBlockedUserFromDB(data);
         set((state) => ({
-            blockedUser: [...state.blockedUser, ...blockedUser],
+            blockedUser: [...state.blockedUser, ...blockedUsers],
             userPublicProfiles: {
                 ...state.userPublicProfiles,
                 [blockedId]: blockedPublicProfile
@@ -276,11 +401,9 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
         }));
     },
 
-    subscribeToChanges: () => {
+    subscribeToChanges: (session: any) => {
 
-        set({ loading: true });
-        const { session } = useAuthContext();
-        const userId = session?.user.id;
+        const userId = session.user.id;
 
         const channel = supabase
             .channel(`friend-changes-${userId}`)
@@ -373,7 +496,67 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
                     }));
                 }
             )
+            // Listen for delete in friends for deleted friend
+            // * Since friend is bi-directional, only need to listen 
+            // * to user_id to prevent redundant delete for one user
+            .on(
+                'postgres_changes',
+                {
+                    event: 'DELETE',
+                    schema: 'public',
+                    table: 'friends',
+                },
+                async (payload) => {
 
+                    const { user_id: deletedUserId, friend_id: friendId } = payload.old;
+
+                    if (deletedUserId === userId) {
+
+                        set((state) => {
+
+                            const updatedUserPublicProfiles = friendId in state.userPublicProfiles
+                                ? (({ [friendId]: _, ...rest }) => rest)(state.userPublicProfiles)
+                                : state.userPublicProfiles;
+
+                            return {
+                                friends: state.friends.filter(e => e.friendId !== friendId),
+                                userPublicProfiles: updatedUserPublicProfiles
+                            };
+                        });
+                    }
+                }
+            )
+            // Listen for delete in friendRequests for both sender and receiver
+            .on(
+                'postgres_changes',
+                {
+                    event: 'DELETE',
+                    schema: 'public',
+                    table: 'friend_requests',
+                },
+                async (payload) => {
+
+                    const { id: requestId, sender_id: senderId, receiver_id: receiverId } = payload.old;
+
+                    if (senderId === userId || receiverId === userId) {
+                        set((state) => {
+
+                            let updatedUserPublicProfiles = state.userPublicProfiles;
+
+                            if (senderId! in state.userPublicProfiles || receiverId! in state.userPublicProfiles) {
+                                const { [senderId!]: _, [receiverId!]: __, ...rest } = state.userPublicProfiles;
+                                updatedUserPublicProfiles = rest;
+                            }
+
+                            return {
+                                pendingSentRequests: state.pendingSentRequests.filter(e => e.id !== requestId),
+                                userPublicProfiles: updatedUserPublicProfiles
+                            };
+                        });
+                    }
+                }
+
+            )
             .subscribe();
 
         return () => {
