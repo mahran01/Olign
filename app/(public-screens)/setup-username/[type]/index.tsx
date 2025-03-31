@@ -141,7 +141,7 @@ const SetupUsername: React.FC<ISetupUsernameProps> = (props) => {
       }
     }
     else if (param.type === 'update') {
-      const { data: updatedData, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from("user_profiles")
         .update({ username, name, avatar_uri: avatarUri })
         .eq("user_id", session?.user.id);
@@ -154,28 +154,44 @@ const SetupUsername: React.FC<ISetupUsernameProps> = (props) => {
         }
       }
     }
-    const { error } = await supabase.functions.invoke('create-stream-user', {
-      body: {
-        userId: session?.user.id,
-        name: name,
-        username: username,
-        avatar_uri: avatarUri,
-      },
-    });
-    const { error: updateError } = await updateUserData({ username, name, avatar_uri: avatarUri });
 
-    if (error || updateError) {
-      console.log(error);
+    const retry = async (fn: () => Promise<any>, retries = 3, delay = 1000) => {
+      for (let i = 0; i < retries; i++) {
+        const result = await fn();
+        if (!result.error) return result;
+        await new Promise((res) => setTimeout(res, delay));
+      }
+      return { error: true };
+    };
+
+    const streamResult = await retry(() =>
+      supabase.functions.invoke("create-stream-user", {
+        body: { userId: session?.user.id, name, username, avatar_uri: avatarUri },
+      })
+    );
+
+    if (streamResult.error) {
+      console.error("Failed to add stream user after retries.");
+      await supabase.from("user_profiles").delete().eq("username", username);
+      setErrorText("Failed to create profile. Please try again.");
+      setStatus("off");
       return;
     }
 
-    setSuccessText('Profile updated successfully!');
-    if (!error && !updateError && param.type === 'create') {
-      const { error } = await setUserIsReady(true);
-      if (!error) {
-        router.replace('/');
-      }
+    const { error: updateError } = await updateUserData({ username, name, avatar_uri: avatarUri });
+
+    if (updateError) {
+      console.error("Update user data error:", updateError);
+      setErrorText("Something went wrong, but your account was created.");
     }
+
+    setSuccessText("Profile updated successfully!");
+
+    if (param.type === "create") {
+      const { error: readyError } = await setUserIsReady(true);
+      if (!readyError) router.replace("/");
+    }
+
     setStatus('off');
   };
 
