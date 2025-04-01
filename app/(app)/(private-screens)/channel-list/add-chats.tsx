@@ -1,68 +1,22 @@
 import { buildAvatar, buildListItem } from '@/components';
 import { useFriendContext, useUserContext } from '@/contexts';
+import { useFriendStore } from '@/stores';
 import { MessageCircle, MessageSquarePlus, MessagesSquare, UserRoundPlus } from '@tamagui/lucide-icons';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import { H5, ListItem, ScrollView, YGroup, YStack } from 'tamagui';
 
-interface IAddChatProps {
+interface IAddChatsProps {
 }
 
-const AddChat: React.FC<IAddChatProps> = (props) => {
+const AddChats: React.FC<IAddChatsProps> = (props) => {
     const router = useRouter();
-    const { friends: friend2, pendingRequest, receivedRequest } = useFriendContext();
-    const friends: { avatarUri: string, name: string, username: string; }[] = [
-        // {
-        //     avatarUri: "",
-        //     name: "John Doe",
-        //     username: "johndoe"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "Jane Smith",
-        //     username: "janesmith"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "Michael Johnson",
-        //     username: "michaeljohnson"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "Emily Davis",
-        //     username: "emilydavis"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "David Brown",
-        //     username: "davidbrown"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "Sophia Wilson",
-        //     username: "sophiawilson"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "James Lee",
-        //     username: "jameslee"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "Olivia Harris",
-        //     username: "oliviaharris"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "William Clark",
-        //     username: "williamclark"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "Isabella Allen",
-        //     username: "isabellaallen"
-        // }
-    ];
+    const { friends, pendingSentRequests, pendingReceivedRequests, userPublicProfiles } = useFriendStore();
+
+    // TODO: Create event when clicked, need to look into stream API
+    const addChat = (friendId: string) => {
+
+    };
 
     return (
         <>
@@ -91,11 +45,10 @@ const AddChat: React.FC<IAddChatProps> = (props) => {
                     </YGroup>
                     <H5 px="$2" pt="$5" pb="$3">Start Messaging Your Friends</H5>
                     {(() => {
-                        // Define the type for groupedFriends
                         const groupedFriends: Record<string, typeof friends> = {};
 
                         friends.forEach((friend) => {
-                            const firstChar = friend.name.charAt(0).toUpperCase();
+                            const firstChar = userPublicProfiles[friend.friendId].name!.charAt(0).toUpperCase();
                             let category: string;
 
                             if (/[^A-Za-z0-9]/.test(firstChar)) {
@@ -110,38 +63,47 @@ const AddChat: React.FC<IAddChatProps> = (props) => {
                             groupedFriends[category].push(friend);
                         });
 
-                        // Sort categories: Symbols first, Numbers second, A-Z last
-                        // const sortedCategories = Object.keys(groupedFriends).sort((a, b) => {
-                        //     if (a === "Symbols") return -1;
-                        //     if (b === "Symbols") return 1;
-                        //     if (a === "Numbers") return -1;
-                        //     if (b === "Numbers") return 1;
-                        //     return a.localeCompare(b);
-                        // });
+                        const sortedCategories = Object.keys(groupedFriends).sort((a, b) => {
+                            if (a === "Symbols") return -1;
+                            if (b === "Symbols") return 1;
+                            if (a === "Numbers") return -1;
+                            if (b === "Numbers") return 1;
+                            return a.localeCompare(b);
+                        });
 
-                        return Object.keys(groupedFriends).map((category) => (
+                        return sortedCategories.map((category) => (
                             <React.Fragment key={category}>
                                 <H5 px="$3" pt="$3" pb="$2">{category}</H5>
                                 <YGroup bg="$background">
                                     {groupedFriends[category]
-                                        .sort((a, b) => a.name.localeCompare(b.name)) // Sort within the group
-                                        .map((friend) => (
-                                            <YGroup.Item key={friend.username}>
-                                                <ListItem
-                                                    size="$5"
-                                                    hoverTheme
-                                                    pressTheme
-                                                    icon={buildAvatar({
-                                                        avatarUri: friend.avatarUri,
-                                                        name: friend.name,
-                                                        size: "small",
-                                                    })}
-                                                    title={friend.name}
-                                                    onPress={() => console.log("STAR")}
-                                                    iconAfter={<MessageCircle size="$1" />}
-                                                />
-                                            </YGroup.Item>
-                                        ))}
+                                        .sort((a, b) => {
+                                            const nameA = userPublicProfiles[a.friendId].name!;
+                                            const nameB = userPublicProfiles[b.friendId].name!;
+                                            return nameA.localeCompare(nameB);
+                                        })
+                                        .map((friend) => {
+                                            const { friendId } = friend;
+                                            const { name, username, avatarUri } = userPublicProfiles[friendId];
+                                            return (
+                                                <YGroup.Item key={friend.friendId}>
+                                                    <ListItem
+                                                        size="$5"
+                                                        hoverTheme
+                                                        pressTheme
+                                                        icon={buildAvatar({
+                                                            avatarUri: avatarUri!,
+                                                            name: name!,
+                                                            size: "small",
+                                                        })}
+                                                        title={name}
+                                                        onPress={() => addChat(friendId)}
+                                                        iconAfter={<MessageCircle size="$1" />}
+                                                    />
+                                                </YGroup.Item>
+                                            );
+                                        }
+
+                                        )}
                                 </YGroup>
                             </React.Fragment>
                         ));
@@ -151,10 +113,10 @@ const AddChat: React.FC<IAddChatProps> = (props) => {
                             <H5>Friends: [ {friends?.toString()} ]</H5>
                         </YGroup.Item>
                         <YGroup.Item>
-                            <H5>Pending: [ {pendingRequest?.toString()} ]</H5>
+                            <H5>Pending: [ {pendingSentRequests?.toString()} ]</H5>
                         </YGroup.Item>
                         <YGroup.Item>
-                            <H5>Received: [ {receivedRequest?.toString()} ]</H5>
+                            <H5>Received: [ {pendingReceivedRequests?.toString()} ]</H5>
                         </YGroup.Item>
                     </YGroup>
                 </YStack>
@@ -163,4 +125,4 @@ const AddChat: React.FC<IAddChatProps> = (props) => {
     );
 };
 
-export default AddChat;
+export default AddChats;

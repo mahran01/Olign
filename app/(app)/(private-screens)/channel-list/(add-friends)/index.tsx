@@ -1,17 +1,19 @@
 import { AddFriendByUsernameDialog, buildAvatar, buildListItem } from '@/components';
+import { useFriendStore } from '@/stores';
 import { AtSign, ContactRound, Plus, UserRoundCog } from '@tamagui/lucide-icons';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Button, H4, H5, Image, ListItem, Switch, View, YGroup, YStack } from 'tamagui';
 
-interface ISearchFriendProps {
+interface IAddFriendsProps {
 }
 
-const SearchFriend: React.FC<ISearchFriendProps> = (props) => {
+const AddFriends: React.FC<IAddFriendsProps> = (props) => {
 
     const router = useRouter();
     const [checked, setChecked] = useState(false);
     const [openDialog, setOpenDialog] = useState(false);
+    const { pendingReceivedRequests, pendingSentRequests } = useFriendStore();
 
     const friends: { avatarUri: string, name: string, username: string; }[] = [
         // {
@@ -93,7 +95,7 @@ const SearchFriend: React.FC<ISearchFriendProps> = (props) => {
                     {buildListItem({
                         icon: <UserRoundCog size='$1' />,
                         title: "Friend Requests",
-                        subtitle: "0 sent, 0 received",
+                        subtitle: `${pendingSentRequests.length} sent, ${pendingReceivedRequests.length} received`,
                         onPress: () => console.log("STAR")
                     })}
                     {buildListItem({
@@ -114,8 +116,8 @@ const SearchFriend: React.FC<ISearchFriendProps> = (props) => {
                                     uri: require('@/assets/friend.png'),
                                 }} />
                             </View>
-                            <H4>Sync your contact to</H4>
-                            <H5>find people you might know</H5>
+                            <H4>Sync your contact</H4>
+                            <H5>and find people you might know</H5>
                         </View>
                         :
                         <YGroup bg='$background'>
@@ -155,4 +157,4 @@ const SearchFriend: React.FC<ISearchFriendProps> = (props) => {
     );
 };
 
-export default SearchFriend;
+export default AddFriends;

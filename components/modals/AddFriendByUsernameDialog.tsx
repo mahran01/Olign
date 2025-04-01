@@ -1,7 +1,10 @@
 import React from "react";
 import { Dialog, Button, Input, Unspaced, XStack } from "tamagui";
 import { X } from "@tamagui/lucide-icons";
-import { useFriendContext, useUserContext } from "@/contexts";
+import { useAuthContext, useFriendContext, useUserContext } from "@/contexts";
+import { useFriendStore } from "@/stores";
+import { UserPublicProfileType } from "@/models";
+import { supabase } from "@/utils/supabase";
 
 interface AddFriendByUsernameDialogProps {
     open: boolean;
@@ -12,13 +15,44 @@ const AddFriendByUsernameDialog: React.FC<AddFriendByUsernameDialogProps> = ({ o
 
     const { handleAddFriend } = useFriendContext();
     const { getUserIdByUsername } = useUserContext();
+    const { sendFriendRequest } = useFriendStore();
+    const { session } = useAuthContext();
+
+    const [username, setUsername] = React.useState("");
+
+    const getUserPublicProfile = async (id: string) => {
+        const { data, error } = await supabase
+            .from('user_profiles')
+            .select('name, username, avatar_uri')
+            .eq('user_id', id)
+            .single();
+
+        if (error || !data) {
+            console.error("Error fetching user profile:", error);
+            return null;
+        }
+
+        return { username: data.username, name: data.name, avatarUri: data.avatar_uri };
+    };
 
     const handleAddFriendByUsername = async () => {
-        const addFriend = async () => {
-            const id = await getUserIdByUsername("m6mah_ran");
-            if (id) handleAddFriend(id);
-        };
-        await addFriend();
+        console.log(username);
+
+        const id = await getUserIdByUsername(username);
+
+        console.log("User ID: ", id);
+        if (!id) {
+            console.error("User not found");
+            return;
+        }
+        const publicProfile = await getUserPublicProfile(id);
+        console.log("User Profile: ", publicProfile);
+        if (!publicProfile) {
+            console.error("User Profile not found");
+            return;
+        }
+
+        await sendFriendRequest(id, publicProfile, session);
     };
 
     return (
@@ -55,7 +89,7 @@ const AddFriendByUsernameDialog: React.FC<AddFriendByUsernameDialogProps> = ({ o
                     <Dialog.Description>
                         Enter the username of your friend
                     </Dialog.Description>
-                    <Input id="name" placeholder="username" />
+                    <Input id="name" placeholder="username" onChangeText={setUsername} />
                     <Unspaced>
                         <Dialog.Close asChild>
                             <Button
@@ -78,7 +112,7 @@ const AddFriendByUsernameDialog: React.FC<AddFriendByUsernameDialogProps> = ({ o
                         </Dialog.Close>
 
                         <Dialog.Close asChild>
-                            <Button theme="accent" aria-label="Send Friend Request" onPress={() => console.log('STAR')}>
+                            <Button theme="accent" aria-label="Send Friend Request" onPress={handleAddFriendByUsername} disabled={!username.trim()}>
                                 Send Friend Request
                             </Button>
                         </Dialog.Close>
