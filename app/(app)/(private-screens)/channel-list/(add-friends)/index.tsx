@@ -96,7 +96,7 @@ const AddFriends: React.FC<IAddFriendsProps> = (props) => {
                         icon: <UserRoundCog size='$1' />,
                         title: "Friend Requests",
                         subtitle: `${pendingSentRequests.length} sent, ${pendingReceivedRequests.length} received`,
-                        onPress: () => console.log("STAR")
+                        onPress: () => router.push('/channel-list/(friend-requests)')
                     })}
                     {buildListItem({
                         icon: <AtSign size='$1' />,
