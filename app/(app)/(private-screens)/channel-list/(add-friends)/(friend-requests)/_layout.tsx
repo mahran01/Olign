@@ -1,27 +1,27 @@
-import { LogIn, UserPlus2 } from '@tamagui/lucide-icons';
+import { Stack } from 'expo-router';
 import React, { useState } from 'react';
-import { useColorScheme } from 'react-native';
 import { SceneMap, TabBar, TabView } from 'react-native-tab-view';
-import { Button, useTheme, View, XGroup } from 'tamagui';
+import { useTheme } from 'tamagui';
 import ReceivedFriendRequests from './received-friend-requests';
 import SentFriendRequests from './sent-friend-requests';
-import { Stack } from 'expo-router';
+import { useWindowDimensions } from 'react-native';
 
 interface IFriendRequestsLayoutProps {
 }
 
 const FriendRequestsLayout: React.FC<IFriendRequestsLayoutProps> = (props) => {
     const theme = useTheme();
-    const colorScheme = useColorScheme();
+    const layout = useWindowDimensions();
 
     const bgColor = theme.background.val;
     const accentColor = theme.accentBackground.val;
     const textColor = theme.color.val;
+    const textInactiveColor = theme.color10.val;
 
     const [index, setIndex] = useState(0);
     const [routes] = useState([
-        { index: 0, key: 'sent', title: 'Sent', icon: <LogIn /> },
-        { index: 1, key: 'received', title: 'Received', icon: <UserPlus2 /> },
+        { key: 'sent', title: 'Sent' },
+        { key: 'received', title: 'Received' },
     ]);
 
     const renderScene = SceneMap({
@@ -29,32 +29,28 @@ const FriendRequestsLayout: React.FC<IFriendRequestsLayoutProps> = (props) => {
         received: ReceivedFriendRequests,
     });
 
-    const renderTabBar = (props: any) => {
-        return (
-            <TabBar
-                {...props}
-                indicatorStyle={{ backgroundColor: accentColor }}
-                style={{ backgroundColor: bgColor }}
-                labelStyle={{ color: textColor, fontWeight: 'bold' }}
-            />
-        );
-    };
+    const renderTabBar = (props: any) => (
+        <TabBar
+            {...props}
+            style={{ backgroundColor: bgColor }}
+            indicatorStyle={{ backgroundColor: accentColor }}
+            activeColor={textColor}
+            inactiveColor={textInactiveColor}
+        />
+    );
 
     return (
-        <View f={1} bg='$background'>
+        <>
             {/* TabView */}
             <Stack.Screen options={{ title: "Friend Requests" }} />
             <TabView
                 navigationState={{ index, routes }}
                 renderScene={renderScene}
                 onIndexChange={setIndex}
-                initialLayout={{ width: 400 }}
                 renderTabBar={renderTabBar}
-                swipeEnabled={true}
-                tabBarPosition='top'
-                style={{ flex: 1 }}
+                initialLayout={{ width: layout.width }}
             />
-        </View>
+        </>
     );
 };
 
