@@ -1,7 +1,7 @@
 import React from "react";
 import { Dialog, Button, Input, Unspaced, XStack } from "tamagui";
 import { X } from "@tamagui/lucide-icons";
-import { useAuthContext, useFriendContext, useUserContext } from "@/contexts";
+import { useAuthContext, useUserContext } from "@/contexts";
 import { useFriendStore } from "@/stores";
 import { UserPublicProfileType } from "@/models";
 import { supabase } from "@/utils/supabase";
@@ -13,7 +13,6 @@ interface AddFriendByUsernameDialogProps {
 
 const AddFriendByUsernameDialog: React.FC<AddFriendByUsernameDialogProps> = ({ open, setOpen }) => {
 
-    const { handleAddFriend } = useFriendContext();
     const { getUserIdByUsername } = useUserContext();
     const { sendFriendRequest } = useFriendStore();
     const { session } = useAuthContext();
