@@ -1,13 +1,13 @@
+import { buildFriendRequestList } from '@/components';
+import { useFriendStore } from '@/stores';
 import React from 'react';
-import { H1, View } from 'tamagui';
 
-interface IReceivedFriendRequestsProps {
+interface IReceivedFriendRequests {
 }
 
-const ReceivedFriendRequests: React.FC<IReceivedFriendRequestsProps> = (props) => {
-    return (
-        <View><H1>Received</H1></View>
-    );
+const ReceivedFriendRequests: React.FC<IReceivedFriendRequests> = (props) => {
+
+    return buildFriendRequestList(false);
 };
 
 export default ReceivedFriendRequests;
