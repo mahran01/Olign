@@ -1,5 +1,5 @@
 import { ChatWrapper } from '@/components';
-import { AppProvider, FriendProvider, useAuthContext, UserProvider } from '@/contexts';
+import { AppProvider, useAuthContext, UserProvider } from '@/contexts';
 import { useFriendStore } from '@/stores';
 import { Redirect, Stack } from 'expo-router';
 import React, { useEffect } from 'react';
@@ -11,14 +11,14 @@ interface IAppProps {
 const App: React.FC<IAppProps> = () => {
 
     const { session, isLoading, userIsReady } = useAuthContext();
-    const { fetchAll, subscribeToChanges } = useFriendStore();
+    const { fetchAll, subscribeToChanges } = useFriendStore.getState();
 
     useEffect(() => {
         if (session) {
             fetchAll(session);
             subscribeToChanges(session);
         }
-    }, []);
+    }, [session]);
 
     // You can keep the splash screen open, or render a loading screen like we do here.
     if (isLoading) {
