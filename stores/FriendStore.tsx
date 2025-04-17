@@ -9,29 +9,35 @@ import {
     BlockedUserType,
     SentFriendRequestType,
     ReceivedFriendRequestType,
-    mapBlockedUserFromDB
+    mapBlockedUserFromDB,
+    FriendRequestStatusType
 } from '@/models';
 
 export type FriendState = {
     pendingSentRequests: SentFriendRequestType[];
-    rejectedSentRequests: Set<string>;
     pendingReceivedRequests: ReceivedFriendRequestType[];
     friends: FriendType[];
-    blockedUser: BlockedUserType[];
-    getBlockedByUser: Set<string>;
+    blockedUsers: BlockedUserType[];
+    getBlockedByUsers: Set<string>;
     userPublicProfiles: Record<string, UserPublicProfileType>;
     loading: boolean;
+    toastMessage: { type?: "error" | "success" | "warning" | "info" | "small" | "smallErr", title: string, message?: string; } | null;
 };
 
 export type FriendAction = {
+    resetToastMessage: () => void;
     fetchAll: (session: any) => Promise<void>;
-    fetchUserPublicProfile: (userId: string) => Promise<UserPublicProfileType>;
+    fetchUserPublicProfile: (param:
+        | { userId: string; username?: never; }
+        | { userId?: never; username: string; }
+    ) => Promise<UserPublicProfileType>;
     sendFriendRequest: (receiverId: string, receiverPublicProfile: UserPublicProfileType, session: any) => Promise<void>;
     acceptFriendRequest: (requestId: string) => Promise<void>;
     rejectFriendRequest: (requestId: string) => Promise<void>;
-    removeFriendRequest: (requestId: string) => Promise<void>;
+    _removeFriendRequest: (requestId: string) => Promise<void>;
+    _updateFriendRequest: (requestId: string, status: FriendRequestStatusType) => Promise<void>;
     cancelFriendRequest: (requestId: string) => Promise<void>;
-    getRequestIdFromUserId: (anotherUserId: string) => string;
+    _getRequestIdFromUserId: (anotherUserId: string) => string;
     removeFriend: (friendId: string, session: any) => Promise<void>;
     blockUser: (blockedId: string, blockedPublicProfile: UserPublicProfileType, session: any) => Promise<void>;
     subscribeToChanges: (session: any) => void;
@@ -41,47 +47,48 @@ export type FriendStore = FriendState & FriendAction;
 
 export const defaultInitState: FriendState = {
     pendingSentRequests: [],
-    rejectedSentRequests: new Set(),
     pendingReceivedRequests: [],
     friends: [],
-    blockedUser: [],
-    getBlockedByUser: new Set(),
+    blockedUsers: [],
+    getBlockedByUsers: new Set(),
     userPublicProfiles: {},
     loading: false,
+    toastMessage: null
 };
 
 export const useFriendStore = create<FriendStore>()((set, get) => ({
     ...defaultInitState,
 
+    resetToastMessage: () => {
+        set({ toastMessage: null });
+    },
+
     fetchAll: async (session) => {
         const userId = session.user.id;
 
-        const _fetchFriendRequests = async () => {
+        const _fetchPendingRequests = async () => {
 
             const { data, error } = await supabase
                 .from('friend_requests')
                 .select(`id, sender_id, receiver_id, status`)
                 .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-                .in('status', ['pending', 'rejected']);
+                .eq('status', 'pending');
 
             if (error) {
                 throw new Error('Error fetching friend requests: ' + error.message);
             }
 
-            const { rejected, received, sent } = data.reduce((r, e) => {
-                if (e.sender_id === userId && e.status === 'rejected') {
-                    r.rejected.add(e.receiver_id);
-                }
-                else if (e.receiver_id === userId && e.status === 'pending') {
+            const { received, sent } = data.reduce((r, e) => {
+                if (e.receiver_id === userId && e.status === 'pending') {
                     r.received.push({ id: e.id, status: e.status, senderId: e.sender_id });
                 }
                 else if (e.sender_id === userId && e.status === 'pending') {
                     r.sent.push({ id: e.id, status: e.status, receiverId: e.receiver_id });
                 }
                 return r;
-            }, { rejected: new Set<string>(), received: [] as ReceivedFriendRequestType[], sent: [] as SentFriendRequestType[] });
+            }, { received: [] as ReceivedFriendRequestType[], sent: [] as SentFriendRequestType[] });
 
-            set({ rejectedSentRequests: rejected, pendingSentRequests: sent, pendingReceivedRequests: received });
+            set({ pendingSentRequests: sent, pendingReceivedRequests: received });
         };
 
         const _fetchFriends = async () => {
@@ -111,22 +118,22 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
                 throw new Error('Error fetching blocked users: ' + error.message);
             }
 
-            const { blockedUser, getBlockedByUser } = data.reduce((r, e) => {
+            const { blockedUsers, getBlockedByUsers } = data.reduce((r, e) => {
                 if (e.user_id === userId) {
-                    r.blockedUser.push({ id: e.id, blockedId: e.blocked_id });
+                    r.blockedUsers.push({ id: e.id, blockedId: e.blocked_id });
                 }
                 else if (e.blocked_id === userId) {
-                    r.getBlockedByUser.add(e.user_id);
+                    r.getBlockedByUsers.add(e.user_id);
                 }
                 return r;
-            }, { blockedUser: [] as BlockedUserType[], getBlockedByUser: new Set<string>() });
+            }, { blockedUsers: [] as BlockedUserType[], getBlockedByUsers: new Set<string>() });
 
-            set({ blockedUser, getBlockedByUser });
+            set({ blockedUsers, getBlockedByUsers });
         };
 
         const _fetchUserPublicProfiles = async () => {
 
-            const state = useFriendStore.getState();
+            const state = get();
             const userIds = new Set([
                 ...state.pendingSentRequests.map(e => e.receiverId),
                 ...state.pendingReceivedRequests.map(e => e.senderId),
@@ -156,7 +163,7 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
 
         try {
             await Promise.all([
-                _fetchFriendRequests(),
+                _fetchPendingRequests(),
                 _fetchFriends(),
                 _fetchBlockedUsers(),
             ]);
@@ -172,13 +179,13 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
         set({ loading: false });
     },
 
-    fetchUserPublicProfile: async (userId: string) => {
+    fetchUserPublicProfile: async ({ userId, username }) => {
         set({ loading: true });
 
         const { data, error } = await supabase
             .from('user_profiles')
             .select(`username, name, avatar_uri`)
-            .eq('user_id', userId)
+            .eq(userId ? 'user_id' : username ? 'username' : '', userId || username)
             .single();
 
         set({ loading: false });
@@ -199,13 +206,59 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
 
         const state = get();
 
-        if (userId === receiverId ||
-            state.getBlockedByUser.has(receiverId) ||
-            state.rejectedSentRequests.has(receiverId) ||
-            state.pendingSentRequests.some(e => e.receiverId === receiverId) ||
-            state.friends.some(e => e.friendId === receiverId)) {
-
-            console.error('Error sending friend request: Already a friend or pending request or rejected request or get blocked by receiver');
+        if (userId === receiverId) {
+            set({
+                loading: false,
+                toastMessage: {
+                    type: 'error',
+                    title: 'Error sending friend request',
+                    message: 'You cannot send a friend request to yourself.'
+                }
+            });
+            return;
+        }
+        if (state.getBlockedByUsers.has(receiverId)) {
+            set({
+                loading: false,
+                toastMessage: {
+                    type: 'error',
+                    title: 'Error sending friend request',
+                    message: 'User cannot be found'
+                }
+            });
+            return;
+        }
+        if (state.blockedUsers.some(e => e.blockedId === receiverId)) {
+            set({
+                loading: false,
+                toastMessage: {
+                    type: 'error',
+                    title: 'Error sending friend request',
+                    message: 'You need to unblock the user first.'
+                }
+            });
+            return;
+        }
+        if (state.pendingSentRequests.some(e => e.receiverId === receiverId)) {
+            set({
+                loading: false,
+                toastMessage: {
+                    type: 'error',
+                    title: 'Error sending friend request',
+                    message: 'You already send the friend request.'
+                }
+            });
+            return;
+        }
+        if (state.friends.some(e => e.friendId === receiverId)) {
+            set({
+                loading: false,
+                toastMessage: {
+                    type: 'error',
+                    title: 'Error sending friend request',
+                    message: 'You two are already a friend.'
+                }
+            });
             return;
         }
 
@@ -214,10 +267,25 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
             .insert({ receiver_id: receiverId })
             .select();
 
-        set({ loading: false });
-
+        if (error?.message.includes('sending another friend request after rejection')) {
+            set({
+                loading: false,
+                toastMessage: {
+                    type: 'error',
+                    title: 'Error sending friend request',
+                    message: 'You need to wait for a while before sending another request.'
+                }
+            });
+            return;
+        }
         if (error) {
             console.error('Error inserting friend request: ', error.message);
+            set({
+                toastMessage: {
+                    type: 'smallErr',
+                    title: 'Failed to send friend request',
+                },
+            });
             return;
         }
 
@@ -227,6 +295,11 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
             userPublicProfiles: {
                 ...state.userPublicProfiles,
                 [receiverId]: receiverPublicProfile
+            },
+            toastMessage: {
+                type: 'success',
+                title: 'Friend request sent',
+                message: 'Friend request sent successfully',
             }
         }));
     },
@@ -244,6 +317,12 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
 
         if (error) {
             console.error('Error accepting request:', error.message);
+            set({
+                toastMessage: {
+                    type: 'smallErr',
+                    title: 'Failed to accept friend request',
+                },
+            });
             return;
         }
     },
@@ -259,6 +338,12 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
 
         if (error) {
             console.error('Error rejecting request:', error.message);
+            set({
+                toastMessage: {
+                    type: 'smallErr',
+                    title: 'Failed to reject friend request',
+                },
+            });
             return;
         }
 
@@ -271,16 +356,19 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
 
             return {
                 pendingSentRequests: state.pendingSentRequests.filter(e => e.id !== requestId),
-                userPublicProfiles: updatedUserPublicProfiles
+                userPublicProfiles: updatedUserPublicProfiles,
+                toastMessage: {
+                    type: 'small',
+                    title: 'Friend request rejected sucessfully',
+                },
             };
         });
     },
 
     /**
-     * Only use this to remove request or to remove buggy request
-     * * Don't use outside of this file *
+     * * Do not use outside of this file *
      */
-    removeFriendRequest: async (requestId) => {
+    _removeFriendRequest: async (requestId) => {
 
         set({ loading: true });
 
@@ -294,14 +382,32 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
         }
     },
 
+    /**
+     * * Do not use outside of this file *
+     */
+    _updateFriendRequest: async (requestId, status) => {
+
+        set({ loading: true });
+
+        const { error } = await supabase
+            .from('friend_requests')
+            .update({ status })
+            .eq('id', requestId);
+
+        if (error) {
+            throw new Error('Error updating friend request: ' + error.message);
+        }
+
+    },
+
     cancelFriendRequest: async (requestId) => {
 
         set({ loading: true });
 
-        const { removeFriendRequest, pendingSentRequests, userPublicProfiles } = get();
+        const { _updateFriendRequest: updateFriendRequest, pendingSentRequests, userPublicProfiles } = get();
 
         try {
-            await get().removeFriendRequest(requestId);
+            await updateFriendRequest(requestId, "cancelled");
             const request = pendingSentRequests.find(e => e.id === requestId);
 
             if (request) {
@@ -315,15 +421,28 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
 
                 set({
                     pendingSentRequests: pendingSentRequests.filter(e => e.id !== requestId),
-                    userPublicProfiles: updatedUserPublicProfiles
+                    userPublicProfiles: updatedUserPublicProfiles,
+                    toastMessage: {
+                        type: 'small',
+                        title: 'Friend request cancelled successfully',
+                    }
                 });
             }
         } catch (e: any) {
-            console.log(e.message);
+            console.error("Error cancel friend request: ", e.message);
+            set({
+                toastMessage: {
+                    type: 'smallErr',
+                    title: 'Failed to cancel friend request',
+                },
+            });
         }
     },
 
-    getRequestIdFromUserId: (anotherUserId) => {
+    /**
+     * * Do not use outside of this file *
+     */
+    _getRequestIdFromUserId: (anotherUserId) => {
 
         const { pendingSentRequests, pendingReceivedRequests } = get();
 
@@ -338,6 +457,7 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
         return '';
     },
 
+    //TODO: Add toast IF NECESSARY
     removeFriend: async (friendId, session) => {
 
         set({ loading: true });
@@ -349,7 +469,14 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
             .delete()
             .or(`(user_id.eq.${userId},friend_id.eq.${friendId}),(user_id.eq.${friendId},friend_id.eq.${userId})`);
 
+        //TODO: Check if its necessary to throw
         if (friendsErr) {
+            set({
+                toastMessage: {
+                    type: 'smallErr',
+                    title: 'Failed to remove Friend',
+                },
+            });
             throw new Error(`Error removing friend: ${friendsErr?.message}`);
         }
     },
@@ -362,22 +489,34 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
 
         const {
             userPublicProfiles,
-            blockedUser,
+            blockedUsers,
             pendingSentRequests,
             pendingReceivedRequests,
             friends,
-            removeFriendRequest,
+            _updateFriendRequest,
             removeFriend,
             cancelFriendRequest
         } = get();
 
         if (userId === blockedId) {
-            console.error('Cannot block self');
+            set({
+                loading: false,
+                toastMessage: {
+                    type: 'small',
+                    title: "You can't block yourself 🤔",
+                }
+            });
             return;
         }
-        const existingBlock = blockedUser.find(e => e.blockedId === blockedId);
+        const existingBlock = blockedUsers.find(e => e.blockedId === blockedId);
         if (existingBlock) {
-            console.error('User is already blocked');
+            set({
+                loading: false,
+                toastMessage: {
+                    type: 'small',
+                    title: 'You already blocked the user',
+                }
+            });
             return;
         }
         // Only check when they are among friends, pending request or blocked users
@@ -386,11 +525,23 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
             let sentRequest, receivedRequest, friend;
 
             if (sentRequest = pendingSentRequests.find(e => e.receiverId === blockedId))
-                cancelFriendRequest(sentRequest.id);
+                _updateFriendRequest(sentRequest.id, 'disabled');
             else if (receivedRequest = pendingReceivedRequests.find(e => e.senderId === blockedId))
-                removeFriendRequest(receivedRequest.id);
+                _updateFriendRequest(receivedRequest.id, 'disabled');
             else if (friend = friends.find(e => e.friendId === blockedId))
                 removeFriend(friend.id, session);
+        }
+
+        // Possibility of blocked user already send a friend request but haven't update yet.
+        const { data: tmpData } = await supabase
+            .from('friend_requests')
+            .select('id')
+            .eq('receiver_id', userId)
+            .eq('sender_id', blockedId)
+            .eq('status', 'pending');
+
+        if (tmpData) {
+            _updateFriendRequest(tmpData[0].id, 'disabled');
         }
 
         const { data, error } = await supabase
@@ -402,20 +553,37 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
 
         if (error) {
             console.error('Error blocking user: ', error.message);
+            set({
+                toastMessage: {
+                    type: 'smallErr',
+                    title: 'Failed to block user',
+                },
+            });
             return;
         }
 
         if (!data || data.length === 0) {
-            console.error('No data returned from blocking user');
+            set({
+                toastMessage: {
+                    type: 'small',
+                    title: 'Error blocking user',
+                    message: "Cannot find the user specified"
+                }
+            });
             return;
         }
 
-        const blockedUsers = mapBlockedUserFromDB(data);
+        const mappedblockedUsers = mapBlockedUserFromDB(data);
         set((state) => ({
-            blockedUser: [...state.blockedUser, ...blockedUsers],
+            blockedUsers: [...state.blockedUsers, ...mappedblockedUsers],
             userPublicProfiles: {
                 ...state.userPublicProfiles,
                 [blockedId]: blockedPublicProfile
+            },
+            toastMessage: {
+                type: 'success',
+                title: 'User blocked',
+                message: 'They can no longer interact with you',
             }
         }));
     },
@@ -453,13 +621,46 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
                     filter: `sender_id=eq.${userId}`
                 },
                 (payload) => {
+                    const { id: requestId, receiver_id: receiverId, status } = payload.new;
+
+                    if (!requestId || status === 'pending') return;
+
+                    if (status === 'accepted') {
+                        set((state) => {
+                            const receiverName = state.userPublicProfiles[receiverId].name;
+                            return ({
+                                toastMessage: {
+                                    type: 'success',
+                                    title: `${receiverName} accepted your friend request`,
+                                    message: 'You can now interact with each other',
+                                }
+                            });
+                        });
+                    }
+
+                    if (status === 'accepted' || status === 'rejected' || status === 'disabled') {
+                        set((state) => ({
+                            pendingSentRequests: state.pendingSentRequests.filter(e => e.id !== requestId)
+                        }));
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'friend_requests',
+                    filter: `receiver_id=eq.${userId}`
+                },
+                (payload) => {
                     const { id: requestId, status } = payload.new;
 
                     if (!requestId || status === 'pending') return;
 
-                    else if (status === 'accepted' || status === 'rejected') {
+                    if (status === 'cancelled' || status === 'disabled') {
                         set((state) => ({
-                            pendingSentRequests: state.pendingSentRequests.filter(e => e.id !== requestId),
+                            pendingReceivedRequests: state.pendingReceivedRequests.filter(e => e.id !== requestId)
                         }));
                     }
                 }
@@ -477,23 +678,18 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
                     const { id: requestId, sender_id: senderId, status } = payload.new;
                     if (!requestId || status !== 'pending') return;
 
-                    const { data, error } = await supabase
-                        .from('user_profiles')
-                        .select(`username, name, avatar_uri`)
-                        .eq('user_id', senderId)
-                        .single();
+                    const profile = await get().fetchUserPublicProfile({ userId: senderId });
 
-                    if (error) {
-                        console.error('Error fetching user public profiles:', error.message);
-                        return;
-                    }
-
-                    const profile = await get().fetchUserPublicProfile(senderId);
                     set((state) => ({
                         pendingReceivedRequests: [...state.pendingReceivedRequests, { id: requestId, senderId, status }],
                         userPublicProfiles: {
                             ...state.userPublicProfiles,
                             [senderId]: profile,
+                        },
+                        toastMessage: {
+                            type: 'success',
+                            title: `${profile.name} sent you a friend request`,
+                            message: 'You can now accept or reject the request',
                         }
                     }));
                 }
@@ -512,7 +708,7 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
                     if (!getBlockedById) return;
 
                     set((state) => ({
-                        getBlockedByUser: new Set<string>([...state.getBlockedByUser, getBlockedById]),
+                        getBlockedByUsers: new Set<string>([...state.getBlockedByUsers, getBlockedById]),
                     }));
                 }
             )
@@ -549,6 +745,7 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
                 }
             )
             // Listen for delete in friendRequests for receiver
+            // TODO: FIX THIS - No longer delete, update instead. So probably unnecessary anymore
             .on(
                 'postgres_changes',
                 {

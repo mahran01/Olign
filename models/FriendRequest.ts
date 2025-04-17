@@ -1,6 +1,4 @@
-import { UserPublicProfile } from "./UserProfile";
-
-export type FriendRequestStatus = "pending" | "accepted" | "rejected";
+export type FriendRequestStatus = "pending" | "accepted" | "rejected" | "cancelled" | "disabled";
 
 // export type FriendRequest = {
 //     id: string;

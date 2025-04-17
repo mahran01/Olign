@@ -17,7 +17,7 @@ const buildFriendRequestsList = (isSender: boolean) => {
         profile: store.userPublicProfiles[e.senderId]
     }));
 
-    const { removeFriendRequest, rejectFriendRequest, acceptFriendRequest } = store;
+    const { cancelFriendRequest, rejectFriendRequest, acceptFriendRequest } = store;
 
     //TODO: Add bottom sheet to display profile
     const displayModal = () => {
@@ -34,7 +34,7 @@ const buildFriendRequestsList = (isSender: boolean) => {
     //TODO: Add onDecline
     const onDecline = (id: string) => {
         if (isSender) {
-            removeFriendRequest(id);
+            cancelFriendRequest(id);
             console.log("REMOVED");
         }
         else {

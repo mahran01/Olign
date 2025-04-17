@@ -1,6 +1,7 @@
 import { ChatWrapper } from '@/components';
 import { AppProvider, useAuthContext, UserProvider } from '@/contexts';
 import { useFriendStore } from '@/stores';
+import { useToastController } from '@tamagui/toast';
 import { Redirect, Stack } from 'expo-router';
 import React, { useEffect } from 'react';
 import { ActivityIndicator } from 'react-native';
@@ -11,7 +12,14 @@ interface IAppProps {
 const App: React.FC<IAppProps> = () => {
 
     const { session, isLoading, userIsReady } = useAuthContext();
-    const { fetchAll, subscribeToChanges } = useFriendStore.getState();
+    // const { fetchAll, subscribeToChanges, toastMessage, resetToastMessage } = useFriendStore.getState();
+    const {
+        toastMessage,
+        resetToastMessage,
+        fetchAll,
+        subscribeToChanges,
+    } = useFriendStore();
+    const toast = useToastController();
 
     useEffect(() => {
         if (session) {
@@ -19,6 +27,13 @@ const App: React.FC<IAppProps> = () => {
             subscribeToChanges(session);
         }
     }, [session]);
+
+    useEffect(() => {
+        if (toastMessage) {
+            toast.show(toastMessage.title, { ...toastMessage });
+            resetToastMessage();
+        }
+    }, [toastMessage]);
 
     // You can keep the splash screen open, or render a loading screen like we do here.
     if (isLoading) {

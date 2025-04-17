@@ -19,7 +19,7 @@ const TabLayout = () => {
 
     const bgColor = theme.background.val;
     const activeColor = theme.accentColor.val;
-    const inactiveColor = theme.color075.val;
+    const inactiveColor = theme.color08.val;
 
     const [index, setIndex] = useState(0);
     const [routes] = useState([

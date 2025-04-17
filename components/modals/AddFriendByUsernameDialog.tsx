@@ -5,6 +5,7 @@ import { useAuthContext, useUserContext } from "@/contexts";
 import { useFriendStore } from "@/stores";
 import { UserPublicProfileType } from "@/models";
 import { supabase } from "@/utils/supabase";
+import { Keyboard } from "react-native";
 
 interface AddFriendByUsernameDialogProps {
     open: boolean;
@@ -12,12 +13,28 @@ interface AddFriendByUsernameDialogProps {
 }
 
 const AddFriendByUsernameDialog: React.FC<AddFriendByUsernameDialogProps> = ({ open, setOpen }) => {
+    const inputRef = React.useRef<any>(null);
 
     const { getUserIdByUsername } = useUserContext();
     const { sendFriendRequest } = useFriendStore();
     const { session } = useAuthContext();
 
     const [username, setUsername] = React.useState("");
+
+    React.useEffect(() => {
+        if (open) {
+            setTimeout(() => {
+                inputRef.current?.focus();
+            }, 100);
+        } else {
+            Keyboard.dismiss();
+        }
+    }, [open]);
+
+    const handleClose = () => {
+        // Keyboard.dismiss();
+        setOpen(false);
+    };
 
     const getUserPublicProfile = async (id: string) => {
         const { data, error } = await supabase
@@ -63,9 +80,8 @@ const AddFriendByUsernameDialog: React.FC<AddFriendByUsernameDialogProps> = ({ o
                     animation="quick"
                     enterStyle={{ opacity: 0 }}
                     exitStyle={{ opacity: 0 }}
-                    onPress={() => setOpen(false)} // Close on outside click
+                    onPress={handleClose}
                 />
-
                 <Dialog.Content
                     miw={400}
                     bordered
@@ -83,35 +99,45 @@ const AddFriendByUsernameDialog: React.FC<AddFriendByUsernameDialogProps> = ({ o
                     enterStyle={{ x: 0, y: -20, opacity: 0, scale: 0.9 }}
                     exitStyle={{ x: 0, y: 10, opacity: 0, scale: 0.95 }}
                     gap="$5"
+                    onPress={() => {
+                        Keyboard.dismiss();
+                    }}
                 >
                     <Dialog.Title>Add by Username</Dialog.Title>
                     <Dialog.Description>
                         Enter the username of your friend
                     </Dialog.Description>
-                    <Input id="name" placeholder="username" onChangeText={setUsername} />
+                    <Input ref={inputRef} id="name" placeholder="username" onChangeText={setUsername} autoFocus={false} />
                     <Unspaced>
-                        <Dialog.Close asChild>
+                        <Dialog.Close bg='$background' asChild>
                             <Button
-                                position="absolute"
-                                top="$3"
-                                right="$3"
-                                size="$2"
+                                pos="absolute"
+                                t="$3"
+                                r="$3"
                                 circular
-                                icon={X}
-                                onPress={() => setOpen(false)}
+                                icon={<X size='$1' />}
+                                onPress={handleClose}
                             />
                         </Dialog.Close>
                     </Unspaced>
 
                     <XStack alignSelf="flex-end" gap="$4">
                         <Dialog.Close asChild>
-                            <Button aria-label="Cancel" onPress={() => setOpen(false)}>
+                            <Button aria-label="Cancel" onPress={handleClose}>
                                 Cancel
                             </Button>
                         </Dialog.Close>
 
                         <Dialog.Close asChild>
-                            <Button theme="accent" aria-label="Send Friend Request" onPress={handleAddFriendByUsername} disabled={!username.trim()}>
+                            <Button
+                                theme="accent"
+                                aria-label="Send Friend Request"
+                                onPress={async () => {
+                                    await handleAddFriendByUsername();
+                                    handleClose();
+                                }}
+                                disabled={!username.trim()}
+                            >
                                 Send Friend Request
                             </Button>
                         </Dialog.Close>
