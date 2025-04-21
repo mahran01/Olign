@@ -1,3 +1,4 @@
+import { Skeleton } from "stream-chat-expo";
 import { Avatar, Text } from "tamagui";
 
 const accentColors = [
@@ -15,23 +16,48 @@ const accentColors = [
     "#FF922B"  // Orange
 ];
 
-const buildAvatar = ({ avatarUri, name, size }: { avatarUri: string; name: string; size?: 'small' | 'medium' | 'large'; }) => {
-    const bg = accentColors[Math.floor(Math.random() * accentColors.length)];
+type AvatarType = {
+    loading: true;
+    avatarUri?: never;
+    name?: never;
+    size?: 'small' | 'medium' | 'large';
+} | {
+    loading?: never;
+    avatarUri: string;
+    name: string;
+    size?: 'small' | 'medium' | 'large';
+};
+
+const buildAvatar = (props: AvatarType) => {
+
+    const { size } = props;
+
     const avatarSize = size === 'small' ? '$3' : size === 'medium' ? '$5' : size === 'large' ? '$12' : '$5';
     const fontSize = size === 'small' ? '$5' : size === 'medium' ? '$8' : size === 'large' ? '$12' : '$8';
 
+    if (props.loading) {
+        return <Avatar circular size={avatarSize} overflow='hidden'><Skeleton /></Avatar>;
+    }
+
+    const { avatarUri, name } = props;
+    const bg = accentColors[Math.floor(Math.random() * accentColors.length)];
+
     return (
-        <Avatar circular size={avatarSize}>
+        <Avatar circular size={avatarSize} overflow='hidden'>
             {avatarUri !== '' ? <Avatar.Image
                 accessibilityLabel={avatarUri}
                 src={avatarUri}
             /> : void (0)}
             {/* <Avatar.Image src={friend.avatarUri} /> */}
             <Avatar.Fallback bg={bg} f={1} jc='center' ai="center">
-                <Text fos={fontSize} color='white'>{name?.charAt(0).toUpperCase()}</Text>
+                <Text fos={fontSize} color='white'>{name.charAt(0).toUpperCase()}</Text>
             </Avatar.Fallback>
         </Avatar>
     );
+};
+
+export const CustomAvatar: React.FC<AvatarType> = (props) => {
+    return buildAvatar(props);
 };
 
 export default buildAvatar;

@@ -8,7 +8,8 @@ export { default as AddFriendByUsernameDialog } from "./modals/AddFriendByUserna
 export { default as Header } from "./navigation/Header";
 export { default as TabBarIcon } from "./navigation/TabBarIcon";
 export { RootProvider } from "./RootProvider";
-export { default as buildAvatar } from "./shared/buildAvatar";
+export { default as buildAvatar, CustomAvatar } from "./shared/buildAvatar";
 export { default as buildListItem } from "./shared/buildListItem";
 export { default as Ripple } from "./shared/Ripple";
 export { default as ThreeColumns } from "./shared/ThreeColumns";
+export { default as UserList } from "./shared/UserList";

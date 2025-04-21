@@ -297,9 +297,8 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
                 [receiverId]: receiverPublicProfile
             },
             toastMessage: {
-                type: 'success',
-                title: 'Friend request sent',
-                message: 'Friend request sent successfully',
+                type: 'small',
+                title: 'Friend request sent successfully',
             }
         }));
     },
@@ -325,6 +324,15 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
             });
             return;
         }
+
+
+        set(state => ({
+            pendingReceivedRequests: state.pendingReceivedRequests.filter(e => e.id !== requestId),
+            toastMessage: {
+                type: 'small',
+                title: 'Friend request accepted sucessfully',
+            }
+        }));
     },
 
     rejectFriendRequest: async (requestId) => {
@@ -645,6 +653,7 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
                     }
                 }
             )
+            // Listen for updates in friend_requests for receiver
             .on(
                 'postgres_changes',
                 {
@@ -721,11 +730,12 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
                     event: 'DELETE',
                     schema: 'public',
                     table: 'friends',
-                    filter: `user_id=eq.${userId}`
+                    // TODO: According to the documentaion the filter should work just fine for DELETE, but after multiple test and debuggging it seems like it doesn't work as expected
+                    // filter: `user_id=eq.${userId}`
                 },
                 async (payload) => {
-
                     const { id: friendship_id } = payload.old;
+
                     const friendId = get().friends.find(e => e.id === friendship_id)?.friendId;
 
                     if (friendId) {
@@ -743,45 +753,6 @@ export const useFriendStore = create<FriendStore>()((set, get) => ({
                         });
                     }
                 }
-            )
-            // Listen for delete in friendRequests for receiver
-            // TODO: FIX THIS - No longer delete, update instead. So probably unnecessary anymore
-            .on(
-                'postgres_changes',
-                {
-                    event: 'DELETE',
-                    schema: 'public',
-                    table: 'friend_requests',
-                    filter: `receiver_id=eq.${userId}`
-                },
-                async (payload) => {
-
-                    const { id: requestId } = payload.old;
-                    const senderId = get().pendingReceivedRequests.find(e => e.id === requestId)?.senderId;
-
-                    if (senderId) {
-                        console.log("Inside condition");
-
-                        set((state) => {
-
-                            let updatedUserPublicProfiles = state.userPublicProfiles;
-
-                            if (senderId in state.userPublicProfiles) {
-                                const { [senderId!]: _, ...rest } = state.userPublicProfiles;
-                                updatedUserPublicProfiles = rest;
-                            }
-
-                            console.log('Raw data from insert:', updatedUserPublicProfiles);
-                            console.log('Mapped sentRequests:', state.pendingSentRequests.filter(e => e.id !== requestId));
-
-                            return {
-                                pendingSentRequests: state.pendingSentRequests.filter(e => e.id !== requestId),
-                                userPublicProfiles: updatedUserPublicProfiles
-                            };
-                        });
-                    }
-                }
-
             )
             .subscribe();
 
