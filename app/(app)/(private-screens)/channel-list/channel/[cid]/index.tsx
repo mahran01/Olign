@@ -1,4 +1,4 @@
-import { Header } from "@/components";
+import { CustomMessageInput, CustomMessageSimple, Header } from "@/components";
 import { AppContext } from "@/contexts";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { EllipsisVertical } from "@tamagui/lucide-icons";
@@ -32,11 +32,12 @@ const ChannelScreen: React.FC<IChannelScreenProps> = (props) => {
 
     const makeHeader = () => {
         const color = theme.background.val;
+
         return (
             <Header
                 color={color}
                 backButton={true}
-                title={channel.data!.name}
+                title={channel.type === "messaging" ? channel._client._user?.name : channel.data!.name}
                 right={() => (
                     <Button bg={color} circular={true} icon={<EllipsisVertical size={'$1'} />} />
                 )}
@@ -57,7 +58,7 @@ const ChannelScreen: React.FC<IChannelScreenProps> = (props) => {
                             }
                         }}
                     />
-                    <MessageInput />
+                    <CustomMessageInput />
                 </Channel>
             ) : null}
         </SafeAreaView>

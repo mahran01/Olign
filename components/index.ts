@@ -12,4 +12,6 @@ export { default as buildAvatar, CustomAvatar } from "./shared/buildAvatar";
 export { default as buildListItem } from "./shared/buildListItem";
 export { default as Ripple } from "./shared/Ripple";
 export { default as ThreeColumns } from "./shared/ThreeColumns";
+export { CustomMessageInput } from "./channel/CustomMessageInput";
 export { default as UserList } from "./shared/UserList";
+export { default as CustomMessageSimple } from './channel/CustomMessageSimple';
