@@ -1,21 +1,48 @@
-import { buildAvatar, buildListItem } from '@/components';
-import { useFriendContext, useUserContext } from '@/contexts';
+import { buildListItem, UserList } from '@/components';
+import { AppContext, useAuthContext } from '@/contexts';
 import { useFriendStore } from '@/stores';
 import { MessageCircle, MessageSquarePlus, MessagesSquare, UserRoundPlus } from '@tamagui/lucide-icons';
+import { useToastController } from '@tamagui/toast';
 import { Stack, useRouter } from 'expo-router';
-import React from 'react';
-import { H5, ListItem, ScrollView, YGroup, YStack } from 'tamagui';
+import React, { useContext, useState } from 'react';
+import { useChatContext } from 'stream-chat-expo';
+import { H5, ScrollView, YGroup, YStack } from 'tamagui';
 
 interface IAddChatsProps {
 }
 
 const AddChats: React.FC<IAddChatsProps> = (props) => {
     const router = useRouter();
-    const { friends, pendingSentRequests, pendingReceivedRequests, userPublicProfiles } = useFriendStore();
+    const { friends, pendingSentRequests, pendingReceivedRequests, userPublicProfiles, loading: isLoading } = useFriendStore();
+    const toast = useToastController();
+    const [isCreatingChannel, setIsCreatingChannel] = useState(false);
+    const { session } = useAuthContext();
+    const { client, isOnline } = useChatContext();
+    const { setChannel } = useContext(AppContext);
 
     // TODO: Create event when clicked, need to look into stream API
     const addChat = (friendId: string) => {
 
+        const createChannel = async () => {
+            if (!session?.user.id) return;
+
+            setIsCreatingChannel(true);
+            try {
+                const channel = client.channel("messaging", {
+                    members: [session.user.id, friendId],
+                });
+                await channel.create();
+                await channel.watch();
+                setChannel(channel);
+                router.push(`/channel/${channel.cid}`);
+            } catch (error) {
+                console.error('Error creating channel:', error);
+            } finally {
+                setIsCreatingChannel(false);
+            }
+        };
+
+        createChannel();
     };
 
     return (
@@ -26,29 +53,47 @@ const AddChats: React.FC<IAddChatsProps> = (props) => {
                     <YGroup>
                         {buildListItem({
                             icon: <UserRoundPlus size='$1' />,
-                            title: "Add friends",
+                            title: "Manage friends",
                             // subtitle: "Find your friends",
-                            onPress: () => router.push('/channel-list/(add-friends)')
+                            onPress: () => router.push('/(manage-friends)')
                         })}
                         {buildListItem({
                             icon: <MessagesSquare size='$1' />,
                             title: "Add Existing Channel",
                             // subtitle: "Browse existing channels",
-                            onPress: () => console.log("STAR")
+                            onPress: () => {
+                                toast.show('Friend request blocked', {
+                                    message: 'You must wait 7 days before sending another request to this user.',
+                                });
+                            }
                         })}
                         {buildListItem({
                             icon: <MessageSquarePlus size='$1' />,
                             title: "Create New Channel",
                             // subtitle: "Create your own channel",
-                            onPress: () => console.log("STAR")
+                            onPress: () => router.push('/(create-channel)')
                         })}
                     </YGroup>
                     <H5 px="$2" pt="$5" pb="$3">Start Messaging Your Friends</H5>
                     {(() => {
+                        if (isLoading) {
+                            return (
+                                <YGroup bg="$background" gap='$2'>
+                                    {[...Array(3)].map((_, i) => (
+                                        <UserList loading />
+                                    ))}
+                                </YGroup>
+                            );
+                        }
+
                         const groupedFriends: Record<string, typeof friends> = {};
 
                         friends.forEach((friend) => {
-                            const firstChar = userPublicProfiles[friend.friendId].name!.charAt(0).toUpperCase();
+                            const name = userPublicProfiles[friend.friendId].name;
+
+                            if (!name) return;
+
+                            const firstChar = name.charAt(0).toUpperCase();
                             let category: string;
 
                             if (/[^A-Za-z0-9]/.test(firstChar)) {
@@ -77,38 +122,34 @@ const AddChats: React.FC<IAddChatsProps> = (props) => {
                                 <YGroup bg="$background">
                                     {groupedFriends[category]
                                         .sort((a, b) => {
-                                            const nameA = userPublicProfiles[a.friendId].name!;
-                                            const nameB = userPublicProfiles[b.friendId].name!;
+                                            const nameA = userPublicProfiles[a.friendId].name;
+                                            const nameB = userPublicProfiles[b.friendId].name;
+
+                                            if (!nameA || !nameB) return 0;
+
                                             return nameA.localeCompare(nameB);
                                         })
                                         .map((friend) => {
                                             const { friendId } = friend;
-                                            const { name, username, avatarUri } = userPublicProfiles[friendId];
+                                            const { name, avatarUri } = userPublicProfiles[friendId];
+                                            if (!name) return <UserList key={friendId} loading />;
                                             return (
-                                                <YGroup.Item key={friend.friendId}>
-                                                    <ListItem
-                                                        size="$5"
-                                                        hoverTheme
-                                                        pressTheme
-                                                        icon={buildAvatar({
-                                                            avatarUri: avatarUri!,
-                                                            name: name!,
-                                                            size: "small",
-                                                        })}
-                                                        title={name}
-                                                        onPress={() => addChat(friendId)}
-                                                        iconAfter={<MessageCircle size="$1" />}
-                                                    />
-                                                </YGroup.Item>
+                                                <UserList
+                                                    key={friendId}
+                                                    id={friendId}
+                                                    name={name}
+                                                    avatarUri={avatarUri ?? ""}
+                                                    icon={<MessageCircle onPress={() => addChat(friendId)} />}
+                                                />
                                             );
-                                        }
-
-                                        )}
+                                        })
+                                    }
                                 </YGroup>
                             </React.Fragment>
                         ));
                     })()}
-                    <YGroup px='$4'>
+                    {/* TODO: Delete */}
+                    {/* <YGroup px='$4'>
                         <YGroup.Item>
                             <H5>Friends: [ {friends?.toString()} ]</H5>
                         </YGroup.Item>
@@ -118,7 +159,7 @@ const AddChats: React.FC<IAddChatsProps> = (props) => {
                         <YGroup.Item>
                             <H5>Received: [ {pendingReceivedRequests?.toString()} ]</H5>
                         </YGroup.Item>
-                    </YGroup>
+                    </YGroup> */}
                 </YStack>
             </ScrollView>
         </>
