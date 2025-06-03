@@ -1,8 +1,12 @@
-import { AddFriendByUsernameDialog, buildAvatar, buildListItem } from '@/components';
-import { useFriendStore } from '@/stores';
+import { AddFriendByUsernameDialog, buildAvatar, buildListItem, CustomAvatar, FriendList } from '@/components';
+import { AppContext } from '@/contexts';
+import { useAuthStore, useFriendStore } from '@/stores';
 import { AtSign, ContactRound, Plus, UserRoundCog } from '@tamagui/lucide-icons';
+import { useToastController } from '@tamagui/toast';
 import { Stack, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
+import { ScrollView } from 'react-native-gesture-handler';
+import { useChatContext } from 'stream-chat-expo';
 import { Button, H4, H5, Image, ListItem, Switch, View, YGroup, YStack } from 'tamagui';
 
 interface IAddFriendsProps {
@@ -14,68 +18,100 @@ const AddFriends: React.FC<IAddFriendsProps> = (props) => {
     const [checked, setChecked] = useState(false);
     const [openDialog, setOpenDialog] = useState(false);
     const { pendingReceivedRequests, pendingSentRequests } = useFriendStore();
+    const toast = useToastController();
+    const [isCreatingChannel, setIsCreatingChannel] = useState(false);
+    const session = useAuthStore(s => s.session);
+    // const { session } = useAuthContext();
+    const { client, isOnline } = useChatContext();
+    const { setChannel } = useContext(AppContext);
 
-    const friends: { avatarUri: string, name: string, username: string; }[] = [
-        // {
-        //     avatarUri: "",
-        //     name: "John Doe",
-        //     username: "johndoe"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "Jane Smith",
-        //     username: "janesmith"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "Michael Johnson",
-        //     username: "michaeljohnson"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "Emily Davis",
-        //     username: "emilydavis"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "David Brown",
-        //     username: "davidbrown"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "Sophia Wilson",
-        //     username: "sophiawilson"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "James Lee",
-        //     username: "jameslee"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "Olivia Harris",
-        //     username: "oliviaharris"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "William Clark",
-        //     username: "williamclark"
-        // },
-        // {
-        //     avatarUri: "",
-        //     name: "Isabella Allen",
-        //     username: "isabellaallen"
-        // }
-    ];
+    const addChat = (friendId: string) => {
+
+        const createChannel = async () => {
+            if (!session?.user.id) return;
+
+            setIsCreatingChannel(true);
+            try {
+                const channel = client.channel("messaging", {
+                    members: [session.user.id, friendId],
+                    is_direct: true,
+                });
+                await channel.create();
+                await channel.watch();
+                setChannel(channel);
+                router.push(`/channel-list/channel/${channel.cid}`);
+            } catch (error) {
+                console.error('Error creating channel:', error);
+            } finally {
+                setIsCreatingChannel(false);
+            }
+        };
+
+        createChannel();
+    };
+
+    // const friends: { avatarUri: string, name: string, username: string; }[] = [
+    // {
+    //     avatarUri: "",
+    //     name: "John Doe",
+    //     username: "johndoe"
+    // },
+    // {
+    //     avatarUri: "",
+    //     name: "Jane Smith",
+    //     username: "janesmith"
+    // },
+    // {
+    //     avatarUri: "",
+    //     name: "Michael Johnson",
+    //     username: "michaeljohnson"
+    // },
+    // {
+    //     avatarUri: "",
+    //     name: "Emily Davis",
+    //     username: "emilydavis"
+    // },
+    // {
+    //     avatarUri: "",
+    //     name: "David Brown",
+    //     username: "davidbrown"
+    // },
+    // {
+    //     avatarUri: "",
+    //     name: "Sophia Wilson",
+    //     username: "sophiawilson"
+    // },
+    // {
+    //     avatarUri: "",
+    //     name: "James Lee",
+    //     username: "jameslee"
+    // },
+    // {
+    //     avatarUri: "",
+    //     name: "Olivia Harris",
+    //     username: "oliviaharris"
+    // },
+    // {
+    //     avatarUri: "",
+    //     name: "William Clark",
+    //     username: "williamclark"
+    // },
+    // {
+    //     avatarUri: "",
+    //     name: "Isabella Allen",
+    //     username: "isabellaallen"
+    // }
+    // ];
 
     return (
         <>
             <Stack.Screen options={{ title: "Add Friends" }} />
             <AddFriendByUsernameDialog open={openDialog} setOpen={setOpenDialog} />
-            <YStack p='$4' h='100%' bg='$background'>
+            <YStack p='$2' h='100%' bg='$background'>
 
-                <YGroup bg='$background'>
-                    <YGroup.Item>
+                <ScrollView>
+                    <YGroup bg='$background'>
+                        {/* <YGroup.Item>
                         <ListItem
                             hoverTheme
                             pressTheme
@@ -91,24 +127,26 @@ const AddFriends: React.FC<IAddFriendsProps> = (props) => {
                                 <Switch.Thumb animation='quicker' bg={checked ? 'whitesmoke' : 'whitesmoke'} />
                             </Switch>
                         </ListItem>
-                    </YGroup.Item>
-                    {buildListItem({
-                        icon: <UserRoundCog size='$1' />,
-                        title: "Friend Requests",
-                        subtitle: `${pendingSentRequests.length} sent, ${pendingReceivedRequests.length} received`,
-                        onPress: () => router.push('/channel-list/(friend-requests)')
-                    })}
-                    {buildListItem({
-                        icon: <AtSign size='$1' />,
-                        title: "Add by Username",
-                        onPress: () => setOpenDialog(true)
-                    })}
-                </YGroup>
+                    </YGroup.Item> */}
+                        {buildListItem({
+                            icon: <UserRoundCog size='$1' />,
+                            title: "Friend Requests",
+                            subtitle: `${pendingSentRequests.length} sent, ${pendingReceivedRequests.length} received`,
+                            onPress: () => router.push('/channel-list/(friend-requests)')
+                        })}
+                        {buildListItem({
+                            icon: <AtSign size='$1' />,
+                            title: "Add by Username",
+                            onPress: () => setOpenDialog(true)
+                        })}
+                    </YGroup>
 
-                {/* People you might know section */}
-                <H5 px='$2' pt='$5' pb='$3'>People you might know</H5>
+                    {/* People you might know section */}
+                    <H5 px='$2' pt='$5' pb='$3'>Message your friends</H5>
 
-                {
+                    <FriendList friendOnPress={(id) => id ? addChat(id) : null} />
+                </ScrollView>
+                {/* {
                     friends.length === 0 ?
                         <View jc='center' h={320} ai='center'>
                             <View h={200} pb='$5'>
@@ -134,10 +172,10 @@ const AddFriends: React.FC<IAddFriendsProps> = (props) => {
                                             hoverTheme
                                             pressTheme
                                             icon={
-                                                buildAvatar({
-                                                    avatarUri: friend.avatarUri,
-                                                    name: friend.name,
-                                                })
+                                                <CustomAvatar
+                                                    uri={friend.avatarUri}
+                                                    name={friend.name}
+                                                />
                                             }
                                             title={friend.name}
                                             subTitle={'@' + friend.username}
@@ -151,7 +189,7 @@ const AddFriends: React.FC<IAddFriendsProps> = (props) => {
                                 ))
                             }
                         </YGroup>
-                }
+                } */}
             </YStack >
         </>
     );

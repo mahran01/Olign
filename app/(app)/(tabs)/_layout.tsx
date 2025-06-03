@@ -1,38 +1,39 @@
 import { Header, TabBarIcon } from '@/components';
-import { useAuthContext } from '@/contexts';
+// import { useAuthContext } from '@/contexts';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { CloudMoon, CloudSun, LogOut } from '@tamagui/lucide-icons';
 import React, { ComponentProps, useState } from 'react';
 import { Appearance, useColorScheme } from 'react-native';
 import { SceneMap, TabBar, TabBarItem, TabView } from 'react-native-tab-view';
 import { Button, View, XStack, useTheme } from 'tamagui';
-import ChannelList from './channel-list';
-import Dashboard from './index';
+import ChannelList from '.';
+import Friends from './friends';
 import Profile from './profile';
-import TaskList from './task-list';
-
+import TaskList from './tasks';
+import { useAuthStore } from '@/stores';
 
 const TabLayout = () => {
     const theme = useTheme();
     const colorScheme = useColorScheme();
-    const { signOut } = useAuthContext();
+    // const { signOut } = useAuthContext();
+    const signOut = useAuthStore(s => s.signOut);
 
-    const bgColor = theme.background.val;
-    const activeColor = theme.accentColor.val;
+    const bgColor = theme.color1.val;
+    const activeColor = theme.accent5.val;
     const inactiveColor = theme.color08.val;
 
     const [index, setIndex] = useState(0);
     const [routes] = useState([
-        { index: 0, key: 'dashboard', title: 'Dashboard', icon: "grid" },
-        { index: 1, key: 'channel', title: 'Channels', icon: "chatbubbles" },
-        { index: 2, key: 'task', title: 'Calendar', icon: "calendar" },
-        { index: 3, key: 'profile', title: 'Profile', icon: "person-circle" },
+        { index: 0, key: 'channel', title: 'Channels', icon: "chatbubbles" },
+        { index: 1, key: 'task', title: 'Tasks', icon: "calendar" },
+        { index: 2, key: 'friends', title: 'Friends', icon: "people" },
+        { index: 3, key: 'profile', title: 'Profile', icon: "person" },
     ]);
 
     const renderScene = SceneMap({
-        dashboard: Dashboard,
         channel: ChannelList,
         task: TaskList,
+        friends: Friends,
         profile: Profile,
     });
 
@@ -111,7 +112,7 @@ const TabLayout = () => {
         return (
             <Header
                 title={routes[index].title}
-                color={'$background'}
+                color={bgColor}
                 right={right}
             />
         );

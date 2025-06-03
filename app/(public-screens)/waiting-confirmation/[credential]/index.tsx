@@ -1,5 +1,6 @@
 import { Header } from '@/components';
-import { useAuthContext } from '@/contexts';
+import { useAuthStore } from '@/stores';
+// import { useAuthContext } from '@/contexts';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Button, H2, H4, H5, Spinner, useTheme, XStack, YStack } from 'tamagui';
@@ -15,7 +16,9 @@ const SetupUsername: React.FC<ISetupUsernameProps> = (props) => {
   const credential = JSON.parse(useLocalSearchParams().credential as string);
   const email = credential.email;
   const password = credential.password;
-  const { signIn, resendEmailLink } = useAuthContext();
+  // const { signIn, resendEmailLink } = useAuthContext();
+  const { signIn, resendEmailLink } = useAuthStore();
+
 
   const [error, setError] = useState('');
   const [status, setStatus] = useState<'waiting' | 'verified' | 'error'>('waiting');

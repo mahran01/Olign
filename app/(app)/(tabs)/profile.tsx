@@ -1,8 +1,10 @@
-import { useAuthContext } from '@/contexts';
+// import { useAuthContext } from '@/contexts';
+import { useAuthStore } from '@/stores';
 import { BellRing, BookUser, ChevronRight, Info, ListTodo, MessagesSquare } from '@tamagui/lucide-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Button, Text, View, YStack } from 'tamagui';
+import { LinearGradient } from 'tamagui/linear-gradient';
 
 export const ProfileScreenHeader = () => {
     return (
@@ -16,7 +18,8 @@ interface IProfileScreenProps {
 const ProfileScreen: React.FC<IProfileScreenProps> = () => {
 
     const router = useRouter();
-    const { session } = useAuthContext();
+    const session = useAuthStore(s => s.session);
+    // const { session } = useAuthContext();
     const userMetadata = session?.user.user_metadata;
     const { username, name, avatar_uri: avatarUri } = userMetadata || {};
 
@@ -46,7 +49,7 @@ const ProfileScreen: React.FC<IProfileScreenProps> = () => {
 
     const createSettingButton = ({ id, icon, text, onPress }: any) => {
         return (
-            <Button key={id} onPress={onPress} h='auto' jc='flex-start' w='auto' bg='$background075' pt='$4' pb='$4' ml='$2' mr='$2' mt='$2'>
+            <Button key={id} onPress={onPress} h='auto' bg='transparent' py='$4' br={0} bw={0}>
                 <Button.Icon>
                     {icon}
                 </Button.Icon>
@@ -64,11 +67,19 @@ const ProfileScreen: React.FC<IProfileScreenProps> = () => {
 
 
     return (
-        <YStack>
-            {settingArray.map((item, index) =>
-                createSettingButton({ id: index.toString(), ...item })
-            )}
-        </YStack>
+
+        <LinearGradient
+            colors={['$color1', '$color2']}
+            start={[0, 0]}
+            end={[0, 2]}
+            flex={1} h='100%' w='100%'
+        >
+            <YStack h='100%'>
+                {settingArray.map((item, index) =>
+                    createSettingButton({ id: index.toString(), ...item })
+                )}
+            </YStack>
+        </LinearGradient>
     );
 };
 

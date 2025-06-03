@@ -2,7 +2,7 @@ import { UserPublicProfileType } from "@/models";
 import { Check, X } from "@tamagui/lucide-icons";
 import React from "react";
 import { Button, H4, H5, Image, ListItem, View, XStack, YGroup, YStack } from "tamagui";
-import buildAvatar from "../shared/buildAvatar";
+import CustomAvatar from "../shared/CustomAvatar";
 import { useFriendStore } from "@/stores";
 
 const buildFriendRequestsList = (isSender: boolean) => {
@@ -87,10 +87,10 @@ const buildFriendRequestsList = (isSender: boolean) => {
                                             hoverTheme
                                             pressTheme
                                             icon={
-                                                buildAvatar({
-                                                    avatarUri: profile.avatarUri ?? "",
-                                                    name: profile.name!,
-                                                })
+                                                <CustomAvatar
+                                                    uri={profile.avatarUri ?? ""}
+                                                    name={profile.name!}
+                                                />
                                             }
                                             title={profile.name}
                                             subTitle={'@' + profile.username}

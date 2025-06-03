@@ -1,8 +1,9 @@
 import React from "react";
 import { Dialog, Button, Input, Unspaced, XStack } from "tamagui";
 import { X } from "@tamagui/lucide-icons";
-import { useAuthContext, useUserContext } from "@/contexts";
-import { useFriendStore } from "@/stores";
+import { useUserContext } from "@/contexts";
+// import { useAuthContext, useUserContext } from "@/contexts";
+import { useAuthStore, useFriendStore } from "@/stores";
 import { UserPublicProfileType } from "@/models";
 import { supabase } from "@/utils/supabase";
 import { Keyboard } from "react-native";
@@ -17,22 +18,19 @@ const AddFriendByUsernameDialog: React.FC<AddFriendByUsernameDialogProps> = ({ o
 
     const { getUserIdByUsername } = useUserContext();
     const { sendFriendRequest } = useFriendStore();
-    const { session } = useAuthContext();
+
+    const session = useAuthStore(s => s.session);
+    // const { session } = useAuthContext();
 
     const [username, setUsername] = React.useState("");
 
     React.useEffect(() => {
-        if (open) {
-            setTimeout(() => {
-                inputRef.current?.focus();
-            }, 100);
-        } else {
+        if (!open) {
             Keyboard.dismiss();
         }
     }, [open]);
 
     const handleClose = () => {
-        // Keyboard.dismiss();
         setOpen(false);
     };
 
@@ -107,7 +105,7 @@ const AddFriendByUsernameDialog: React.FC<AddFriendByUsernameDialogProps> = ({ o
                     <Dialog.Description>
                         Enter the username of your friend
                     </Dialog.Description>
-                    <Input ref={inputRef} id="name" placeholder="username" onChangeText={setUsername} autoFocus={false} />
+                    <Input ref={inputRef} id="name" placeholder="username" onChangeText={setUsername} autoFocus />
                     <Unspaced>
                         <Dialog.Close bg='$background' asChild>
                             <Button

@@ -1,5 +1,6 @@
 import { buildTextInput as buildDefaultTextInput } from '@/components';
-import { useAuthContext } from '@/contexts';
+import { useAuthStore } from '@/stores';
+// import { useAuthContext } from '@/contexts';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -16,7 +17,8 @@ interface ISignInProps {
 const SignIn: React.FC<ISignInProps> = (props) => {
 
     const router = useRouter();
-    const { signIn } = useAuthContext();
+    // const { signIn } = useAuthContext();
+    const signIn = useAuthStore(s => s.signIn);
 
     const { control, handleSubmit, formState: { errors, dirtyFields }, watch, trigger } = useForm<FormData>({
         defaultValues: {
@@ -67,31 +69,39 @@ const SignIn: React.FC<ISignInProps> = (props) => {
     const buttonInactive = !areAllFieldsDirty || Object.keys(errors).length > 0;
 
     const onSubmit = async (data: any) => {
+        console.log('Submitting');
         setStatus('submitting');
         const { email, password } = data;
+        console.log('Signing in');
+
         const { error } = await signIn(email, password);
 
+        console.log('Error 1');
         if (error?.includes("Email not confirmed")) {
             setStatus('submitted');
             router.replace(`/waiting-confirmation/${JSON.stringify({ email, password })}`);
+            return;
         }
-        else if (error?.includes('Invalid login credentials')) {
+        console.log('Error 2');
+        if (error?.includes('Invalid login credentials')) {
             console.log('Error during sign-in:', error);
             setError(error);
             setStatus('error');
+            return;
         }
-        else if (error) {
+        console.log('Error 3');
+        if (error) {
             console.log('Error during sign-in:', error);
             setError(error);
             setStatus('error');
+            return;
         }
-        else {
-            setStatus('submitted');
-            router.replace('/');
-        }
+        console.log('Before replace');
+
+        setStatus('submitted');
+        router.replace('/');
     };
 
-    console.log("Inside signin");
     return (
         <View bg="$background" flex={1}>
             <Form ai='center' w='100%' h='100%' gap="$2" p="$6" onSubmit={handleSubmit(onSubmit)} >

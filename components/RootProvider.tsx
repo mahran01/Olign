@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TamaguiProvider, type TamaguiProviderProps } from 'tamagui';
 import { CurrentToast } from './CurrentToast';
+import AuthWrapper from './AuthWrapper';
 
 export function RootProvider({ children, ...rest }: Omit<TamaguiProviderProps, 'config'>) {
     const colorScheme = useColorScheme();
@@ -20,7 +21,7 @@ export function RootProvider({ children, ...rest }: Omit<TamaguiProviderProps, '
         >
             <SafeAreaProvider>
                 <GestureHandlerRootView>
-                    <AuthProvider>
+                    <AuthWrapper>
                         <ToastProvider
                             swipeDirection="horizontal"
                             duration={6000}
@@ -36,7 +37,7 @@ export function RootProvider({ children, ...rest }: Omit<TamaguiProviderProps, '
                             <ToastViewport top={insets.top + 12} left={0} right={0} />
                             <ToastViewport bottom={insets.bottom + 48} left={0} right={0} name='bottom' />
                         </ToastProvider>
-                    </AuthProvider>
+                    </AuthWrapper>
                 </GestureHandlerRootView>
             </SafeAreaProvider>
         </TamaguiProvider>

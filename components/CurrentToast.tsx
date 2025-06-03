@@ -8,6 +8,7 @@ import Animated, {
 import { YStack, isWeb, useTheme } from 'tamagui';
 
 export type ToastType = "error" | "success" | "warning" | "info" | "small" | "smallErr";
+export type ToastMessageType = { type?: ToastType, title: string, message?: string; };
 
 export function CurrentToast() {
   const toast = useToastState();

@@ -38,14 +38,15 @@ const Header: React.FC<IHeaderProps> = (props) => {
 
     return (
         <XStack bg={color} pt={insets.top} pb={10} ai='center'>
-            <View mx={8}>
+            <XStack ml={8} jc='center' ai='center' >
                 {enableBackButton && (<Button bg={color} icon={<ArrowLeft size={'$1'} />} onPress={backButtonFunction} circular={true} />)}
                 {left && left()}
-            </View>
-            <View f={1} mx={8} jc='center'>
-                {title && (<Text fos={20} >{title}</Text>)}
-                {middle && middle()}
-            </View>
+            </XStack>
+            {middle ? middle() : (
+                <XStack f={1} mx={8} ai='center'>
+                    {title && (<Text fos={20} >{title}</Text>)}
+                </XStack>
+            )}
             <View mx={8}>
                 <XStack>
                     {swicthDarkThem && swicthDarkThemButton()}

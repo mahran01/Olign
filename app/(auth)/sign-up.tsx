@@ -1,5 +1,6 @@
 import { buildTextInput as buildDefaultTextInput } from '@/components';
-import { useAuthContext } from '@/contexts';
+import { useAuthStore } from '@/stores';
+// import { useAuthContext } from '@/contexts';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -15,7 +16,9 @@ interface ISignUpProps {
 }
 
 const SignUp: React.FC<ISignUpProps> = (props) => {
-    const { signUp } = useAuthContext();
+    // const { signUp } = useAuthContext();
+
+    const signUp = useAuthStore(s => s.signUp);
     const router = useRouter();
 
     const { control, handleSubmit, formState: { errors, dirtyFields }, watch, trigger } = useForm<FormData>({

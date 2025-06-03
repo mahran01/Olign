@@ -2,7 +2,7 @@
 import React, { ReactNode } from 'react';
 import { Skeleton } from "stream-chat-expo";
 import { View, YGroup, ListItem, YStack } from "tamagui";
-import { CustomAvatar } from "./buildAvatar";
+import { CustomAvatar } from "./CustomAvatar";
 
 type UserListType = {
     loading?: never;
@@ -10,7 +10,8 @@ type UserListType = {
     name: string;
     avatarUri: string;
     onPress?: () => void;
-    icon: JSX.Element;
+    icon?: JSX.Element;
+    bg?: string;
 } | {
     loading: true;
     id?: never;
@@ -18,6 +19,7 @@ type UserListType = {
     avatarUri?: never;
     onPress?: never;
     icon?: never;
+    bg?: string;
 };
 
 const _buildUserList = (props: UserListType) => {
@@ -37,7 +39,7 @@ const _buildUserList = (props: UserListType) => {
         );
     }
 
-    const { id, name, avatarUri, onPress, icon } = props;
+    const { id, name, avatarUri, onPress, icon, bg } = props;
 
     return (
         <YGroup.Item key={id}>
@@ -45,10 +47,11 @@ const _buildUserList = (props: UserListType) => {
                 size="$5"
                 hoverTheme
                 pressTheme
-                icon={<CustomAvatar avatarUri={avatarUri} name={name} size='small' />}
+                icon={<CustomAvatar uri={avatarUri} name={name} size='small' />}
                 title={name}
                 onPress={onPress}
                 iconAfter={icon}
+                bg={bg}
             >
             </ListItem>
         </YGroup.Item>

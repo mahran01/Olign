@@ -1,6 +1,7 @@
 import React, { useState, createContext, useContext, useMemo, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-import { useAuthContext } from './AuthContext';
+import { useAuthStore } from '@/stores';
+// import { useAuthContext } from './AuthContext';
 
 type UserProfile = {
     id: string;
@@ -25,7 +26,8 @@ export const UserContext = createContext<IUserContextProps>({
 });
 
 export const UserProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
-    const { session } = useAuthContext();
+    const session = useAuthStore(s => s.session);
+    // const { session } = useAuthContext();
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null); // Stores the user's profile
     const [loading, setLoading] = useState(true);
 
@@ -65,7 +67,7 @@ export const UserProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
             .eq("username", username)
             .single();
         if (userError) {
-            console.error('Error fetching user:', userError.message);
+            console.error(`Error fetching user (${username}): `, userError.message);
             return null;
         }
         setLoading(false);

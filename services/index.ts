@@ -1,0 +1,28 @@
+export {
+    fetchSingleTask,
+    fetchTaskIdsAssigned,
+    fetchTasksRelatedToUser,
+    fetchTaskRelatedRecords,
+    fetchMilestoneAssignee,
+
+    insertTask,
+    updateTask,
+    deleteTask,
+    insertTaskTag,
+    updateTaskTag,
+    deleteTaskTag,
+    insertTaskAssignee,
+    updateTaskAssignee,
+    deleteTaskAssignee,
+    insertTaskDependency,
+    updateTaskDependency,
+    deleteTaskDependency,
+    insertMilestone,
+    updateMilestone,
+    deleteMilestone,
+    insertMilestoneAssignee,
+    updateMilestoneAssignee,
+    deleteMilestoneAssignee,
+    insertTaskWithRelatedData,
+} from './task.service';
+

@@ -6,8 +6,10 @@ import { useForm } from 'react-hook-form';
 import { Avatar, Button, Form, Input, Spinner, useTheme, View, XGroup, Text, ScrollView, XStack } from 'tamagui';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/utils/supabase';
-import { useAuthContext } from '@/contexts';
 import { decode } from 'base64-arraybuffer';
+import { useAuthStore, useProfileStore } from '@/stores';
+import { retryWithJitter } from '@/utils';
+import { ImageManipulator } from 'expo-image-manipulator';
 
 type FormData = {
   username: string;
@@ -19,10 +21,6 @@ interface ISetupUsernameProps {
 
 const SetupUsername: React.FC<ISetupUsernameProps> = (props) => {
 
-  const theme = useTheme();
-  const router = useRouter();
-  const { session, signOut, setUserIsReady, updateUserData } = useAuthContext();
-
   const param = useLocalSearchParams<{
     type: string;
     username?: string;
@@ -30,12 +28,11 @@ const SetupUsername: React.FC<ISetupUsernameProps> = (props) => {
     avatarUri?: string;
   }>();
 
-  if (param.type === 'update') {
-    const userMetadata = session?.user.user_metadata;
-    param.username = userMetadata?.username;
-    param.name = userMetadata?.name;
-    param.avatarUri = userMetadata?.avatar_uri;
-  }
+  const theme = useTheme();
+  const router = useRouter();
+  const { session, signOut, setUserIsReady, updateUserData, refreshSession } = useAuthStore();
+  const getProfile = useProfileStore(e => e.fetchUserProfile);
+  const profileLoading = useProfileStore(e => e.loading);
 
   const { control, handleSubmit, formState: { errors, dirtyFields }, watch, trigger, setValue } = useForm<FormData>({
     defaultValues: {
@@ -43,7 +40,6 @@ const SetupUsername: React.FC<ISetupUsernameProps> = (props) => {
       name: param.name
     },
   });
-
   const [avatarUri, setAvatarUri] = useState(param.avatarUri || '');
   const [status, setStatus] = useState<'off' | 'submitting' | 'submitted' | 'error'>('off');
   const [usernameError, setUsernameError] = useState('');
@@ -55,6 +51,17 @@ const SetupUsername: React.FC<ISetupUsernameProps> = (props) => {
   });
 
   const { username, name } = watch();
+
+  useEffect(() => {
+    if (param.type === 'update') {
+      (async () => {
+        const profile = await getProfile();
+        setValue('username', profile.username ?? '');
+        setValue('name', profile.name ?? '');
+        setAvatarUri(profile.avatar_uri ?? '');
+      })();
+    }
+  }, []);
 
   useEffect(() => {
     usernameError && setUsernameError('');
@@ -93,12 +100,28 @@ const SetupUsername: React.FC<ISetupUsernameProps> = (props) => {
     });
 
     if (!result.canceled) {
+      const asset = result.assets[0];
+
+      // Resize image if it's larger than 500KB
+      if (asset.base64 && (asset.base64.length * 0.75) > 500 * 1024) {
+        const resizedAsset = await ImageManipulator
+          .manipulate(asset.uri)
+          .resize({ width: 512, height: 512 })
+          .renderAsync();
+
+        const compressedImage = await resizedAsset.saveAsync(
+          { compress: 1, base64: true }
+        );
+
+        asset.base64 = compressedImage.base64!;
+      }
+
       const fileName = `public/avatar-${session?.user.id}.png`;
 
       const { data, error } = await supabase
         .storage
         .from('avatars')
-        .upload(fileName, decode(result.assets[0].base64!), {
+        .upload(fileName, decode(asset.base64!), {
           contentType: 'image/png',
           upsert: true,
         });
@@ -113,12 +136,15 @@ const SetupUsername: React.FC<ISetupUsernameProps> = (props) => {
         .getPublicUrl(fileName);
 
       if (publicUrlData) {
-        setAvatarUri(`${publicUrlData.publicUrl}?timestamp=${Date.now()}`); // Set the avatarUri for form submission
+        setAvatarUri(`${publicUrlData.publicUrl}?timestamp=${Date.now()}`);
       }
     }
   };
 
   const onSubmit = async ({ username, name }: any) => {
+    if (!session) {
+      throw new Error('Unexpected Session Error, Please log out and re-login');
+    }
     setStatus('submitting');
 
     if (param.type === 'create') {
@@ -136,6 +162,7 @@ const SetupUsername: React.FC<ISetupUsernameProps> = (props) => {
             setUsernameError('Username is not available');
           }
         }
+        setErrorText('Something went wrong, please try again later');
         setStatus('off');
         return;
       }
@@ -152,21 +179,17 @@ const SetupUsername: React.FC<ISetupUsernameProps> = (props) => {
           setStatus('off');
           return;
         }
+        setStatus('off');
+        return;
       }
     }
+    else {
+      return;
+    }
 
-    const retry = async (fn: () => Promise<any>, retries = 3, delay = 1000) => {
-      for (let i = 0; i < retries; i++) {
-        const result = await fn();
-        if (!result.error) return result;
-        await new Promise((res) => setTimeout(res, delay));
-      }
-      return { error: true };
-    };
-
-    const streamResult = await retry(() =>
+    const streamResult = await retryWithJitter(() =>
       supabase.functions.invoke("create-stream-user", {
-        body: { userId: session?.user.id, name, username, avatar_uri: avatarUri },
+        body: { userId: session?.user.id, name, username, avatarUri },
       })
     );
 
@@ -178,18 +201,12 @@ const SetupUsername: React.FC<ISetupUsernameProps> = (props) => {
       return;
     }
 
-    const { error: updateError } = await updateUserData({ username, name, avatar_uri: avatarUri });
-
-    if (updateError) {
-      console.error("Update user data error:", updateError);
-      setErrorText("Something went wrong, but your account was created.");
-    }
-
-    setSuccessText("Profile updated successfully!");
-
     if (param.type === "create") {
       const { error: readyError } = await setUserIsReady(true);
       if (!readyError) router.replace("/");
+    }
+    else if (param.type === "update") {
+      await refreshSession();
     }
 
     setStatus('off');
@@ -301,4 +318,4 @@ const SetupUsername: React.FC<ISetupUsernameProps> = (props) => {
   );
 };
 
-export default SetupUsername;
+export default SetupUsername;;

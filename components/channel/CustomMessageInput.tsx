@@ -1,16 +1,21 @@
 import { useAppContext } from "@/contexts";
+import { TaskAttachmentType } from "@/models";
 import { CalendarArrowUp, Paperclip, PlusCircle } from "@tamagui/lucide-icons";
+import { useRouter } from "expo-router";
+import { useState } from "react";
 import { MessageInput, useMessageInputContext } from "stream-chat-expo";
 import { Button, ListItem, Popover, PopoverProps, YGroup } from "tamagui";
+import MoreOptionsPopover from "../shared/MoreOptionsPopover";
 
 export const CustomMessageInput = () => {
     const { channel } = useAppContext();
+    const router = useRouter();
 
     const { toggleAttachmentPicker } = useMessageInputContext();
 
-    const MoreOptionsPopover = ({ Icon, Name, ...props }: PopoverProps & { Icon?: any; Name?: string; }) => {
+    const MoreOptionsPopover = ({ Icon, ...props }: PopoverProps & { Icon?: any; }) => {
         return (
-            <Popover allowFlip stayInFrame offset={15} resize {...props} >
+            <Popover size="$5" allowFlip stayInFrame offset={15} resize {...props} >
                 <Popover.Trigger asChild style={{ aspectRatio: '1/1' }} >
                     <Button icon={Icon} bg='$background0' />
                 </Popover.Trigger>
@@ -48,54 +53,79 @@ export const CustomMessageInput = () => {
                         },
                     ]}
                 >
-                    <Popover.Arrow borderWidth={1} borderColor="$borderColor" />
+                    <Popover.Arrow bg='$color2' borderWidth={1} borderColor="$borderColor" />
 
                     <Popover.Close asChild>
-                        <YGroup>
+                        <YGroup p={0}>
                             <YGroup.Item>
+
                                 <ListItem
                                     icon={<Paperclip />}
                                     title='Upload files'
                                     onPress={toggleAttachmentPicker}
-                                />
+                                >
+                                    <Popover.Close />
+                                </ListItem>
                             </YGroup.Item>
                             <YGroup.Item>
-                                <ListItem
-                                    icon={<CalendarArrowUp />}
-                                    title='Send a task'
-                                />
+                                <Popover.Close asChild flexDirection="row">
+                                    <ListItem
+                                        icon={<CalendarArrowUp />}
+                                        title='Send a task'
+                                        onPress={() => {
+                                            if (channel) {
+                                                router.push(`channel-list/channel/${channel.cid}/(task-maker)`);
+                                            }
+                                        }}
+                                    >
+                                    </ListItem>
+                                </Popover.Close>
                             </YGroup.Item>
                         </YGroup>
                     </Popover.Close>
-
                 </Popover.Content >
             </Popover >
         );
     };
 
-    const sendTask = async () => {
-        console.log('Sending task');
+    // const MoreOptionsMenu = () => {
+    //     const { channel } = useAppContext();
+    //     const router = useRouter();
+    //     const { openAttachmentPicker } = useMessageInputContext();
 
-        if (channel) {
-            const data = await channel.sendMessage({
-                text: "Task created",
-                attachments: [
-                    {
-                        type: "task",
-                        id: Date.now().toString(),
-                        created_at: new Date().toISOString(),
-                        completed: false,
-                        title: "New Task",
-                        description: "Task description here",
-                        assignees: [],
-                    },
-                ],
-            });
-            console.log('Data: ' + data.toString());
-        } else {
-            console.error("Something went wrong.");
-        }
-    };
+    //     return (
+    //         <MoreOptionsPopover
+    //             placement='top'
+    //             Icon={<PlusCircle size='$2' color='$color10' />}
+    //             showArrow
+    //         >
+    //             <YGroup.Item>
+
+    //                 <ListItem
+    //                     icon={<Paperclip />}
+    //                     title='Upload files'
+    //                     onPress={toggleAttachmentPicker}
+    //                 >
+    //                     <Popover.Close />
+    //                 </ListItem>
+    //             </YGroup.Item>
+    //             <YGroup.Item>
+    //                 <Popover.Close asChild flexDirection="row">
+    //                     <ListItem
+    //                         icon={<CalendarArrowUp />}
+    //                         title='Send a task'
+    //                         onPress={() => {
+    //                             if (channel) {
+    //                                 router.push(`channel-list/channel/${channel.cid}/(task-maker)`);
+    //                             }
+    //                         }}
+    //                     >
+    //                     </ListItem>
+    //                 </Popover.Close>
+    //             </YGroup.Item>
+    //         </MoreOptionsPopover>
+    //     );
+    // };
 
     return (
         <MessageInput
@@ -103,7 +133,6 @@ export const CustomMessageInput = () => {
                 <MoreOptionsPopover
                     placement='top-start'
                     Icon={<PlusCircle size='$2' color='$color10' />}
-                    Name="POPOVER"
                 />
             )}
         />

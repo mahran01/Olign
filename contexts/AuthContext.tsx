@@ -138,7 +138,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     setIsLoading(true);
     const { data: dataUpdate, error } = await supabase.auth.updateUser({ data });
     setIsLoading(false);
-    return { data, error: error?.message };
+    return { dataUpdate, error: error?.message };
   };
 
   const authenticateStream = async (userId = session?.user.id) => {
