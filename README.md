@@ -19,6 +19,12 @@ This project was developed as a **Final Year Project** for the Bachelor of Infor
 9. [👨‍💻 Author](#-author)
 10. [📄 License](#-license)
 
+## 🎥 Introduction Video
+
+Watch a short introduction of Olign’s features on YouTube:
+
+▶️ **[Olign – UI & Feature Introduction](https://youtu.be/5RNWuiwzSic)**
+
 ## ✨ Core Features
 
 - 🔐 **Authentication & Security**

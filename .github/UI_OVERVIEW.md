@@ -2,6 +2,14 @@
 
 This document provides a **visual walkthrough of Olign’s user interface and interactions**. It is intended to give visitors an overview of the application **without requiring local setup or execution**.
 
+## 🎥 Video Introduction
+
+Want a quick preview?
+
+▶️ **[Watch the Olign UI Walkthrough on YouTube](https://youtu.be/5RNWuiwzSic)**
+
+This video showcases Olign’s key features and overall look.
+
 ## 🔐 Authentication Flow
 
 ### Sign In & Sign Up
@@ -93,16 +101,6 @@ Tasks are posted into chats for visibility and collaborative tracking.
 </p>
 
 Users can add friends, manage requests, and build their collaboration network.
-
-## 👤 Profile
-
-### User Profile
-
-<p align="center">
-  <img src="./img/profile-tab.jpg" width="300" />
-</p>
-
-Users can update profile information and manage account preferences from the Profile tab.
 
 ## 🎯 Purpose of This Overview
 
