@@ -6,19 +6,19 @@ This document provides a **visual walkthrough of Olign’s user interface and in
 
 ### Sign In & Sign Up
 
-![Sign In Screen](./github/img/sign-in-screen.jpg)
+![Sign In Screen](./img/sign-in-screen.jpg)
 
 Users can either sign in or register from a single authentication screen. Form validation ensures correct input before submission.
 
 ### Email Verification
 
-![Verification Screen](./github/img/verification-screen.jpg)
+![Verification Screen](./img/verification-screen.jpg)
 
 After registration, users must verify their email before proceeding. Verification is handled securely via Supabase and email delivery services.
 
 ### Profile Setup
 
-![Setup Profile Screen](./github/img/setup-profile-screen.jpg)
+![Setup Profile Screen](./img/setup-profile-screen.jpg)
 
 Users configure their username, display name, and avatar before accessing the main application.
 
@@ -26,7 +26,7 @@ Users configure their username, display name, and avatar before accessing the ma
 
 ### Home & Channels
 
-![Channels Tab](./github/img/channels-tab.jpg)
+![Channels Tab](./img/channels-tab.jpg)
 
 The Channels tab is the default landing view, displaying all active direct and group conversations.
 
@@ -34,19 +34,19 @@ The Channels tab is the default landing view, displaying all active direct and g
 
 ### Messaging Screen
 
-![Messaging Screen](./github/img/messaging-screen.jpg)
+![Messaging Screen](./img/messaging-screen.jpg)
 
 Messages are displayed in real time with support for text, media, tasks, and audio messages.
 
 ### Audio Messages
 
-![Recorded Message](./github/img/recorded-message.jpg)
+![Recorded Message](./img/recorded-message.jpg)
 
 Users can record and send voice messages directly from the chat interface.
 
 ### Attachments & Media
 
-![Media Picker](./github/img/media-picker.jpg)
+![Media Picker](./img/media-picker.jpg)
 
 Attachments such as images and files can be added seamlessly without leaving the conversation.
 
@@ -54,7 +54,7 @@ Attachments such as images and files can be added seamlessly without leaving the
 
 ### Task Creation in Chat
 
-![Task Maker Screen](./github/img/task-maker-screen.jpg)
+![Task Maker Screen](./img/task-maker-screen.jpg)
 
 Tasks can be created directly inside conversations, with optional deadlines, assignees, and milestones.
 
@@ -62,7 +62,7 @@ Tasks can be created directly inside conversations, with optional deadlines, ass
 
 ### Tasks in Conversation
 
-![Task in Conversation](./github/img/task-in-conversation.jpg)
+![Task in Conversation](./img/task-in-conversation.jpg)
 
 Tasks are posted into chats for visibility and collaborative tracking.
 
@@ -70,7 +70,7 @@ Tasks are posted into chats for visibility and collaborative tracking.
 
 ### Friends Management
 
-![Friends Tab](./github/img/friends-tab.jpg)
+![Friends Tab](./img/friends-tab.jpg)
 
 Users can add friends, manage requests, and build their collaboration network.
 
@@ -78,7 +78,7 @@ Users can add friends, manage requests, and build their collaboration network.
 
 ### User Profile
 
-![Profile Tab](./github/img/profile-tab.jpg)
+![Profile Tab](./img/profile-tab.jpg)
 
 Users can update profile information and manage account preferences from the Profile tab.
 
