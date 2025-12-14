@@ -7,17 +7,18 @@ This project was developed as a **Final Year Project** for the Bachelor of Infor
 ## 📑 Table of Contents
 
 1. [Olign](#olign)
-2. [✨ Core Features](#-core-features)
-3. [🏗 Technical Overview](#-technical-overview)
-4. [👀 UI Walkthrough](#-ui-walkthrough)
-5. [⚠️ Setup & Development Notice](#️-setup--development-notice)
+2. [🎥 Introduction Video](#-introduction-video)
+3. [✨ Core Features](#-core-features)
+4. [🏗 Technical Overview](#-technical-overview)
+5. [👀 UI Walkthrough](#-ui-walkthrough)
+6. [⚠️ Setup & Development Notice](#️-setup--development-notice)
    1. [What this repository includes](#what-this-repository-includes)
    2. [What this repository does NOT include](#what-this-repository-does-not-include)
-6. [🧠 Architectural Note](#-architectural-note)
-7. [🎓 Academic Context](#-academic-context)
-8. [🔮 Future Enhancements](#-future-enhancements)
-9. [👨‍💻 Author](#-author)
-10. [📄 License](#-license)
+7. [🧠 Architectural Note](#-architectural-note)
+8. [🎓 Academic Context](#-academic-context)
+9. [🔮 Future Enhancements](#-future-enhancements)
+10. [👨‍💻 Author](#-author)
+11. [📄 License](#-license)
 
 ## 🎥 Introduction Video
 
@@ -71,15 +72,24 @@ For a visual, no-setup overview of Olign’s user interface and interactions, se
 
 **Frontend**
 
-- React Native
-- Expo
-- Tamagui
+- React Native with Typescript
+- Expo (with Expo Router)
+- Tamagui (cross-platform UI system)
+- Zustand (global state management)
+- Zod (runtime schema validation)
+- React Hook Form (forms & validation)
+- Reanimated / Moti (animations & gestures)
 
 **Backend & Services**
 
-- Supabase (Authentication, Database, Storage, RPCs, Edge Functions)
-- Stream Chat (Real-time messaging)
-- Twilio SendGrid (Email delivery)
+- Supabase
+  - Authentication & email verification
+  - PostgreSQL database
+  - Storage for media & attachments
+  - RPC functions (business logic)
+  - Edge Functions (server-side processing & secrets)
+- Stream Chat (real-time messaging & audio messages)
+- Twilio SendGrid (transactional email)
 
 ---
 
