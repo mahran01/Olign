@@ -6,7 +6,7 @@ This document provides a **visual walkthrough of Olign’s user interface and in
 
 Want a quick preview?
 
-▶️ **[Watch the Olign UI Walkthrough on YouTube](https://youtu.be/5RNWuiwzSic)**
+▶️ **[Watch the Olign introduction on YouTube](https://youtu.be/5RNWuiwzSic)**
 
 This video showcases Olign’s key features and overall look.
 
