@@ -110,4 +110,4 @@ This UI overview exists to:
 - Showcase interaction design and UX decisions
 - Allow reviewers to understand Olign without running it locally
 
-For architectural and technical details, refer back to the main [README](./README.md).
+For architectural and technical details, refer back to the main [README](../README.md).
